@@ -6,7 +6,8 @@ import mathutils
 import numpy
 
 from .gma import Gma
-from .gcmf import VertexAttribute
+from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap
+from .gml import Gml
 
 #Messages
 MSG_INFO_INIT = '---- {0} ----'
@@ -40,20 +41,46 @@ class Mesh_data:
         self.tex7s = []
 
 
+def convert_value2flags(value, dest_flags):
+    max_bit = len(dest_flags)
+    flags = [False] * max_bit
+
+    for i in range(max_bit):
+        val = value >> ((max_bit - 1) - i)
+        flags[i] = (val & 0x01) == 1
+    return flags
+
+
 #Generate Blender's Material
-#TODO: something ways to store import GMA values
 def generate_material(material, matid, texs, gcmf_texs, is_alpha):
-    flag = material.vtx_descriptor
     mat = bpy.data.materials.new(name=NAME_MATERIAL.format(matid))
+
+    #material setting
+    #Store original GCMF Values
+    gcmf_material = mat.gcmf_material
+    gcmf_material.is_keep = True #Save these values
+    gcmf_material.unk0x02 = convert_value2flags(material.unk0x02, gcmf_material.unk0x02)
+    gcmf_material.unk0x03 = convert_value2flags(material.unk0x03, gcmf_material.unk0x03)
+    gcmf_material.color0 = material.color0
+    gcmf_material.color1 = material.color1
+    gcmf_material.color2 = material.color2
+
+    gcmf_material.emission = material.emission
+    gcmf_material.transparency = material.transparency
+    gcmf_material.unk0x14 = material.unk0x14
+    gcmf_material.unk0x15 = material.unk0x15
+    
+    #Blender Material
+    flag = material.vtx_descriptor
     #Material Color
     mat.diffuse_color = mathutils.Vector((\
-                            material.color0[0], \
-                            material.color0[1], \
-                            material.color0[2]))
+                            material.color0[0] / 0xFF, \
+                            material.color0[1] / 0xFF, \
+                            material.color0[2] / 0xFF))
     mat.specular_color = mathutils.Vector((\
-                            material.color1[0], \
-                            material.color1[1], \
-                            material.color1[2]))
+                            material.color1[0] / 0xFF, \
+                            material.color1[1] / 0xFF, \
+                            material.color1[2] / 0xFF))
     #Emit
     mat.emit = material.emission / 0xFF
     #Alpha
@@ -66,7 +93,6 @@ def generate_material(material, matid, texs, gcmf_texs, is_alpha):
     if flag.gx_va_clr0 == True or flag.gx_va_clr1 == True:
         mat.use_vertex_color_paint = True
     #Texture
-    
     for i, texid in enumerate(material.texture_indexs):
         if texid >= 0 and len(texs) > texid:
             mat.active_texture_index = i
@@ -76,10 +102,10 @@ def generate_material(material, matid, texs, gcmf_texs, is_alpha):
             tex_slot.uv_layer = NAME_UV.format(i)
             tex = gcmf_texs[texid]
             #Mapping
-            if tex.uv_wrap.unknown0:
+            if mat.active_texture.gcmf_texture.uv_wrap[Texture_Wrap.UNKNOW0].real:
                 tex_slot.texture_coords = 'REFLECTION'
-            # if tex.unk0x00.unknown4 or i >= 2:
-            if tex.unk0x00.unknown4:
+            # if mat.active_texture.gcmf_texture.unk0x00[Texture_Flags0x00.UNKNOWN4].real or i >= 2:
+            if mat.active_texture.gcmf_texture.unk0x00[Texture_Flags0x00.UNKNOWN4].real:
                 tex_slot.texture_coords = 'NORMAL'
             #Blend
             if i == 0:
@@ -92,7 +118,6 @@ def generate_material(material, matid, texs, gcmf_texs, is_alpha):
             
             if is_alpha:
                 tex_slot.use_map_alpha = True
-
 
     return mat
 
@@ -124,29 +149,42 @@ def generate_texture(texture, texid, images):
     tex_name = NAME_TEXTURE.format(texid)
     tex = bpy.data.textures.new(name=tex_name, type='IMAGE')
     
+    #Texture setting
+    #Store original GCMF Values
+    tex.gcmf_texture.unk0x00 = convert_value2flags(texture.unk0x00, tex.gcmf_texture.unk0x00)
+    tex.gcmf_texture.mipmap = convert_value2flags(texture.mipmap, tex.gcmf_texture.mipmap)
+    tex.gcmf_texture.uv_wrap = convert_value2flags(texture.uv_wrap, tex.gcmf_texture.uv_wrap)
+    tex.gcmf_texture.texture_index = texture.texture_index
+    tex.gcmf_texture.unk0x06 = texture.unk0x06
+    tex.gcmf_texture.anisotropy = convert_value2flags(texture.anisotropy, tex.gcmf_texture.anisotropy)
+    tex.gcmf_texture.unk0x0C = convert_value2flags(texture.unk0x0C, tex.gcmf_texture.unk0x0C)
+    tex.gcmf_texture.is_swappable = convert_value2flags(texture.is_swappable, tex.gcmf_texture.is_swappable)
+    tex.gcmf_texture.unk0x10 = convert_value2flags(texture.unk0x10, tex.gcmf_texture.unk0x10)
+
     #Wrap
     #GMA    : Blender
     #CLAMP  : EXTEND
     #REPEAT : REPEAT
     #MIRROR : REPEAT and MIRROR
     tex.extension = 'EXTEND'
+    uv_wrap = tex.gcmf_texture.uv_wrap
     #Wrap Repeat X/Y and Mirror X/Y
-    if texture.uv_wrap.repeat_x or \
-    texture.uv_wrap.repeat_y or \
-    texture.uv_wrap.mirror_x or \
-    texture.uv_wrap.mirror_y:
-        tex.extension = 'REPEAT'
+    if uv_wrap[Texture_Wrap.REPEAT_X].real or \
+       uv_wrap[Texture_Wrap.REPEAT_Y].real or \
+       uv_wrap[Texture_Wrap.MIRROR_X].real or \
+       uv_wrap[Texture_Wrap.MIRROR_Y].real:
+       tex.extension = 'REPEAT'
     #Wrap Mirror X
-    if texture.uv_wrap.mirror_x:
+    if uv_wrap[Texture_Wrap.MIRROR_X].real:
         tex.use_mirror_x = True
     #Wrap Mirror Y
-    if texture.uv_wrap.mirror_y:
+    if uv_wrap[Texture_Wrap.MIRROR_Y].real:
         tex.use_mirror_y = True
 
     #Image
     imgid = texture.texture_index
     if imgid >= 0:
-        if texture.unk0x00.commontex:
+        if tex.gcmf_texture.unk0x00[Texture_Flags0x00.COMMON_TEX]:
             name = NAME_TPL_COMMON.format(imgid)
         else:
             name = NAME_TPL.format(imgid)
@@ -193,10 +231,10 @@ def generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, first_iscw):
             v.normal = vec
             mesh_data.normals.append(vec.normalized())
             #Color 0
-            clr = mathutils.Vector(( vertex.clr0[0], vertex.clr0[1], vertex.clr0[2], vertex.clr0[3] ))
+            clr = mathutils.Vector(( vertex.clr0[0]/0xFF, vertex.clr0[1]/0xFF, vertex.clr0[2]/0xFF, vertex.clr0[3]/0xFF ))
             mesh_data.color0s.append(clr)
             #Color 1
-            clr = mathutils.Vector(( vertex.clr1[0], vertex.clr1[1], vertex.clr1[2], vertex.clr1[3] ))
+            clr = mathutils.Vector(( vertex.clr1[0]/0xFF, vertex.clr1[1]/0xFF, vertex.clr1[2]/0xFF, vertex.clr1[3]/0xFF ))
             mesh_data.color1s.append(clr)
             #UV0
             tex = mathutils.Vector(( vertex.tex0[0], -(vertex.tex0[1] - 1.0) ))
@@ -245,6 +283,20 @@ def generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, first_iscw):
     bm.to_mesh(mesh)   
 
 
+#Generate GCMF Attribute
+def generate_attribute(attribute):
+    if attribute.is_16bit:
+        return 'is_16bit'
+    elif attribute.is_stiching:
+        return 'is_stiching'
+    elif attribute.is_skin:
+        return 'is_skin'
+    elif attribute.is_effective:
+        return 'is_effective'
+    else:
+        return "default"
+
+
 #Import gma
 def load(filepath, little_endian=False):
     with open(filepath, 'rb') as file:
@@ -264,8 +316,10 @@ def load(filepath, little_endian=False):
         
         texid = 0
         
+        entrys = gma.entrys
+
         #Generate Mesh
-        for i, entry in enumerate(gma.entrys):
+        for i, entry in enumerate(entrys):
             print(MSG_INFO_INIT.format('Generate Blender Mesh'))
             print(MSG_INFO_DATA.format('Mesh Name', entry.name))
             mesh_name = NAME_POLYGON.format(i)
@@ -279,8 +333,11 @@ def load(filepath, little_endian=False):
 
             bm = bmesh.new()
             gcmf = entry.gcmf
-            mesh_data = Mesh_data() # Store Normals, UVs, VertexColors
+            mesh_data = Mesh_data() # Store Normals, UVs, VertexColors, etc
             
+            obj.gcmf_object.index = i
+            obj.gcmf_object.attribute = generate_attribute(gcmf.attribute)
+
             flags = numpy.array(0x00, dtype='i4')
             total_flags = numpy.array(0x00, dtype='i4')
             
@@ -378,6 +435,8 @@ def load(filepath, little_endian=False):
                 #Is Alpha
                 is_alpha = matid >= gcmf.opaque_count
                 mat = generate_material(material, matid, texs, gcmf_texs, is_alpha)
+                mat.gcmf_material.unk0x3C = submesh.unk0x3C
+                mat.gcmf_material.unk0x40 = convert_value2flags(submesh.unk0x40, mat.gcmf_material.unk0x40)
                 obj.data.materials.append(mat)
             
             bm.free()

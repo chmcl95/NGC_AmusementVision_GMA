@@ -41,19 +41,55 @@ class Mesh_data:
 
 
 #Generate Blender's Material
-#TODO: something ways to store import GMA values
 def generate_material(material, matid, texs, gcmf_texs, is_alpha):
-    flag = material.vtx_descriptor
     mat = bpy.data.materials.new(name=NAME_MATERIAL.format(matid))
+
+    #material setting
+    #Store original GCMF Values
+    gcmf_material = mat.gcmf_material
+    gcmf_material.is_keep = True #Save these values
+    val = [
+            ( ((material.unk0x02 >> 7) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 6) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 5) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 4) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 3) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 2) & 0x01 ) == 1 ),\
+            ( ((material.unk0x02 >> 1) & 0x01 ) == 1 ),\
+            ((material.unk0x02 & 0x01) == 1)
+        ]
+    gcmf_material.unk0x02 = val
+    val = [
+            ( ((material.unk0x03 >> 7) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 6) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 5) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 4) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 3) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 2) & 0x01 ) == 1 ),\
+            ( ((material.unk0x03 >> 1) & 0x01 ) == 1 ),\
+            ((material.unk0x03 & 0x01) == 1)
+        ]
+    gcmf_material.unk0x03 = val
+    gcmf_material.color0 = material.color0
+    gcmf_material.color1 = material.color1
+    gcmf_material.color2 = material.color2
+
+    gcmf_material.emission = material.emission
+    gcmf_material.transparency = material.transparency
+    gcmf_material.unk0x14 = material.unk0x14
+    gcmf_material.unk0x15 = material.unk0x15
+    
+    #Blender Material
+    flag = material.vtx_descriptor
     #Material Color
     mat.diffuse_color = mathutils.Vector((\
-                            material.color0[0], \
-                            material.color0[1], \
-                            material.color0[2]))
+                            material.color0[0] / 0xFF, \
+                            material.color0[1] / 0xFF, \
+                            material.color0[2] / 0xFF))
     mat.specular_color = mathutils.Vector((\
-                            material.color1[0], \
-                            material.color1[1], \
-                            material.color1[2]))
+                            material.color1[0] / 0xFF, \
+                            material.color1[1] / 0xFF, \
+                            material.color1[2] / 0xFF))
     #Emit
     mat.emit = material.emission / 0xFF
     #Alpha
@@ -193,10 +229,10 @@ def generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, first_iscw):
             v.normal = vec
             mesh_data.normals.append(vec.normalized())
             #Color 0
-            clr = mathutils.Vector(( vertex.clr0[0], vertex.clr0[1], vertex.clr0[2], vertex.clr0[2] ))
+            clr = mathutils.Vector(( vertex.clr0[0]/0xFF, vertex.clr0[1]/0xFF, vertex.clr0[2]/0xFF, vertex.clr0[3]/0xFF ))
             mesh_data.color0s.append(clr)
             #Color 1
-            clr = mathutils.Vector(( vertex.clr1[0], vertex.clr1[1], vertex.clr1[2], vertex.clr1[3] ))
+            clr = mathutils.Vector(( vertex.clr1[0]/0xFF, vertex.clr1[1]/0xFF, vertex.clr1[2]/0xFF, vertex.clr1[3]/0xFF ))
             mesh_data.color1s.append(clr)
             #UV0
             tex = mathutils.Vector(( vertex.tex0[0], -(vertex.tex0[1] - 1.0) ))
@@ -378,6 +414,9 @@ def load(filepath, little_endian=False):
                 #Is Alpha
                 is_alpha = matid >= gcmf.opaque_count
                 mat = generate_material(material, matid, texs, gcmf_texs, is_alpha)
+
+                mat.gcmf_material.unk0x3C = submesh.unk0x3C
+                #mat.gcmf_material.unk0x40 = submesh.unk0x40
                 obj.data.materials.append(mat)
             
             bm.free()
