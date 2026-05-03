@@ -6,12 +6,12 @@ import struct
 
 from .gma import Gma, GcmfEntry
 from .gcmf import Gcmf, Attribute, \
-Texture_Flags0x00, Texture_Mipmap, Texture_Wrap, Texture, TransformMatrix, \
-Submesh, Material, \
-VertexAttribute, VertexRenderFlag, DisplatListHeader, \
-DisplayList, Vertex, Strip
+    Texture_Flags0x00, Texture_Mipmap, Texture_Wrap, Texture, TransformMatrix, \
+    Submesh, Material, \
+    VertexAttribute, VertexRenderFlag, DisplatListHeader, \
+    DisplayList, Vertex, Strip
 
-#Messages
+# Messages
 MSG_INFO_INIT = '---- {0} ----'
 MSG_INFO_DATA = '{0}: {1}'
 MSG_WARN_NONE_UV = 'Detect UV not exsit. exported any UV is (0.0, 0.0)'
@@ -29,67 +29,72 @@ def convert_flags2value(src_flags):
     return val
 
 
-#Generate UV-Wrap
-#GMA    : Blender
-#CLAMP  : EXTEND
-#REPEAT : REPEAT
-#MIRROR : REPEAT and MIRROR
-#Blender can't set x and y repeat falgs unique
-def generate_uvwrap(tex):
-    uv_wrap = [False] * len(tex.gcmf_texture.uv_wrap)
+# ---------------------------------------------------------------------------
+# Texture helpers
+# ---------------------------------------------------------------------------
+#def _get_tex_settings_for_material(bl_mat):
+#    """Return list of GCMF_TextureSetting items from the material's collection."""
+#    return list(bl_mat.gcmf_material.tex_settings)
 
-    extension = tex.extension
-    if extension == 'REPEAT':
+# Generate UV-Wrap
+# GMA    : Blender
+# CLAMP  : EXTEND
+# REPEAT : REPEAT
+# MIRROR : REPEAT and MIRROR
+# Blender can't set x and y repeat falgs unique
+def generate_uvwrap(ts):
+    """Rebuild uv_wrap flags from the cached extension/mirror fields in tex_settings."""
+    uv_wrap = [False] * len(ts.uv_wrap)
+
+    if ts.extension == 'REPEAT':
         uv_wrap[Texture_Wrap.REPEAT_X] = True
         uv_wrap[Texture_Wrap.MIRROR_X] = False
         uv_wrap[Texture_Wrap.REPEAT_Y] = True
         uv_wrap[Texture_Wrap.MIRROR_Y] = False
-    
-    if tex.use_mirror_x:
+
+    if ts.use_mirror_x:
         uv_wrap[Texture_Wrap.REPEAT_X] = False
         uv_wrap[Texture_Wrap.MIRROR_X] = True
-    
-    if tex.use_mirror_y:
+
+    if ts.use_mirror_y:
         uv_wrap[Texture_Wrap.REPEAT_Y] = False
         uv_wrap[Texture_Wrap.MIRROR_Y] = True
 
-    tex.gcmf_texture.uv_wrap = uv_wrap
+    ts.uv_wrap = uv_wrap
 
 
-#Generate Mipmap
-def generate_mipmap(tex):
-    mipmap = [False] * len(tex.gcmf_texture.mipmap)
-    
+# ---------------------------------------------------------------------------
+# Generate Mipmap
+# ---------------------------------------------------------------------------
+def generate_mipmap(ts):
+    mipmap = [False] * len(ts.mipmap)
     mipmap[Texture_Mipmap.ENABLE] = True
     mipmap[Texture_Mipmap.UNKNOWN1] = True
     mipmap[Texture_Mipmap.UNKNOWN2] = True
+    ts.mipmap = mipmap
 
-    tex.gcmf_texture.mipmap = mipmap
 
-#Generate Texture
-def generate_texture(bl_tex, img_names, idx):
-    #TODO: Convert from Blender's Texture
+# Generate Texture
+def generate_texture(ts, idx):
+    """Convert a GCMF_TextureSetting into a GCMF Texture struct."""
     print('-Texture')
     texture = Texture()
-    
-    tex = bpy.data.textures[bl_tex.name]
-    
-    #themself index
     texture.index = idx
-    
-    texture.unk0x00 = convert_flags2value(tex.gcmf_texture.unk0x00)
-    texture.mipmap = convert_flags2value(tex.gcmf_texture.mipmap)
-    texture.uv_wrap = convert_flags2value(tex.gcmf_texture.uv_wrap)
-    texture.texture_index = tex.gcmf_texture.texture_index
-    texture.unk0x06 = tex.gcmf_texture.unk0x06
-    texture.anisotropy = convert_flags2value(tex.gcmf_texture.anisotropy)
-    texture.unk0x0C = convert_flags2value(tex.gcmf_texture.unk0x0C)
-    texture.is_swappable = convert_flags2value(tex.gcmf_texture.is_swappable)
-    texture.unk0x10 = convert_flags2value(tex.gcmf_texture.unk0x10)
-
+    texture.unk0x00 = convert_flags2value(ts.unk0x00)
+    texture.mipmap = convert_flags2value(ts.mipmap)
+    texture.uv_wrap = convert_flags2value(ts.uv_wrap)
+    texture.texture_index = ts.texture_index
+    texture.unk0x06 = ts.unk0x06
+    texture.anisotropy = convert_flags2value(ts.anisotropy)
+    texture.unk0x0C = convert_flags2value(ts.unk0x0C)
+    texture.is_swappable = convert_flags2value(ts.is_swappable)
+    texture.unk0x10 = convert_flags2value(ts.unk0x10)
     return texture
 
-#TransformMatrix
+
+# ---------------------------------------------------------------------------
+# TransformMatrix
+# ---------------------------------------------------------------------------
 def generate_matrix():
     matrix = TransformMatrix()
     mtx = mathutils.Matrix()
@@ -114,7 +119,11 @@ def generate_matrix():
     matrix.mtx = mtx
     return matrix
 
-#Generate VAT
+
+# ---------------------------------------------------------------------------
+# Vertex Attribute Table
+# ---------------------------------------------------------------------------
+# TODO: QUIT THIS. VAT must follwing "GCMF VAT setting" values.
 def generate_vat(bl_mat, bm):
     vat = VertexAttribute()
     
@@ -160,27 +169,30 @@ def generate_vat(bl_mat, bm):
             vat.gx_va_tex7 = True
         if uv_count > 8:
             print(MSG_WARN_TOO_MANY.format('UV', uv_count, 7))
-        
+
     return vat
 
-#Generate Material
-def generate_matrial(bm, bl_mat, bl_tex_slots, tex_idx):
+
+# ---------------------------------------------------------------------------
+# Material
+# ---------------------------------------------------------------------------
+
+def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, bl_tex_slots: list, tex_idx: int) -> Material:
     print('-Material')
     material = Material()
-    
+
     vtx_attr = generate_vat(bl_mat, bm)
-    
+
     vtx_render = VertexRenderFlag()
     vtx_render.dlist0_0 = True
 
     texture_indexs = [-1, -1, -1]
     tex_count = 0
-
     tex_slots_count = len(bl_tex_slots)
     if tex_slots_count > 3:
         print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_slots_count, 3))
-    if (tex_slots_count > 0):
-        for i in range( 3 if tex_slots_count > 2 else tex_slots_count ):
+    if tex_slots_count > 0:
+        for i in range(3 if tex_slots_count > 2 else tex_slots_count):
             # over MAX of UV layers
             texture_indexs[i] = tex_idx + i
         tex_count = i + 1
@@ -216,151 +228,129 @@ def generate_matrial(bm, bl_mat, bl_tex_slots, tex_idx):
     material.vtx_render = vtx_render
     material.texture_indexs = texture_indexs
     material.vtx_descriptor = vtx_attr
-    
+
     return material
 
-#Generate Veretex
-def generate_vertex(bm_vtx, loop, bl_loops, bm, bl_tex_slots, obj):
+
+# ---------------------------------------------------------------------------
+# Vertex / Strip / DisplayList
+# ---------------------------------------------------------------------------
+
+def generate_vertex(bm_vtx, loop, bl_loops, bm: bmesh.types.BMesh, bl_tex_slots: list, obj: bpy.types.Object):
     vtx = Vertex()
     
     #Position
-    vtx.pos = [ bm_vtx.co.x, bm_vtx.co.y, bm_vtx.co.z ]
-    #Normal
+    vtx.pos = [bm_vtx.co.x, bm_vtx.co.y, bm_vtx.co.z]
+
     vtx_idx = loop.index
-    print(MSG_INFO_DATA.format('Vertex Index', vtx_idx))
     nrm = bl_loops[vtx_idx].normal
-    vtx.nrm = [ nrm[0], nrm[1], nrm[2] ]
-    #VERTEXCOLOR0~1
+    vtx.nrm = [nrm[0], nrm[1], nrm[2]]
+
     clr_count = len(bm.loops.layers.color)
-    for i in range( 2 if clr_count > 1 else clr_count ):
+    for i in range(2 if clr_count > 1 else clr_count):
         clr_lay = bm.loops.layers.color[i]
         clr = loop[clr_lay]
         if i == 0:
-            vtx.clr0 = [ int(clr[0]*0xFF), int(clr[1]*0xFF), int(clr[2]*0xFF), int(clr[3]*0xFF) ]
+            vtx.clr0 = [int(clr[0] * 0xFF), int(clr[1] * 0xFF),
+                        int(clr[2] * 0xFF), int(clr[3] * 0xFF)]
         if i == 1:
-            vtx.clr1 = [ int(clr[0]*0xFF), int(clr[1]*0xFF), int(clr[2]*0xFF), int(clr[3]*0xFF) ]
-    #TEXTURE0~7
-    vtx.tex0 = [ 0.0, 0.0 ]
-    for i, bl_tex in enumerate(bl_tex_slots):
-        # over MAX of UV layers
-        if (i > 7):
+            vtx.clr1 = [int(clr[0] * 0xFF), int(clr[1] * 0xFF),
+                        int(clr[2] * 0xFF), int(clr[3] * 0xFF)]
+
+    vtx.tex0 = [0.0, 0.0]
+    for i, ts in enumerate(bl_tex_slots):
+        if i > 7:
             break
-
-        # Export UV as first of "UV Maps" at "Data"
         uv_layer = bm.loops.layers.uv[0]
-        if ( len(bm.loops.layers.uv) > i):
-            # Export UV as index of "UV Maps" at "Data"
+        if len(bm.loops.layers.uv) > i:
             uv_layer = bm.loops.layers.uv[i]
-        tex_name = bl_tex.uv_layer
-        # if set UV in "Map" at "Mapping"
-        if ( len(tex_name) > 0 ):
-            # Export UV as index of "Map" at "Texture"
-            _idx = obj.data.uv_layers.find(tex_name)
-            uv_layer = bm.loops.layers.uv[_idx]
-
-        #flip vertical
+        # If a named UV map is stored in the tex_setting, try to use it
+        # (old texture_slots had a uv_layer field; we approximate with index)
         y = -(loop[uv_layer].uv[1] - 1.0)
-        uv = [ loop[uv_layer].uv[0], y ]
+        uv = [loop[uv_layer].uv[0], y]
         if i == 0:
             vtx.tex0 = uv
-        if i == 1:
+        elif i == 1:
             vtx.tex1 = uv
-        if i == 2:
+        elif i == 2:
             vtx.tex2 = uv
-        if i == 3:
+        elif i == 3:
             vtx.tex3 = uv
-        if i == 4:
+        elif i == 4:
             vtx.tex4 = uv
-        if i == 5:
+        elif i == 5:
             vtx.tex5 = uv
-        if i == 6:
+        elif i == 6:
             vtx.tex6 = uv
-        if i == 7:
+        elif i == 7:
             vtx.tex7 = uv
 
     return vtx
 
-#Generate Strip
+
 def generate_strip(bm, face, bl_loops, bl_tex_slots, obj, attribute):
     print('-Strip')
     strip = Strip()
     strip.cmd = 0x99 if attribute.is_16bit else 0x98
     vertexs = []
-    
-    uv_count = len(bm.loops.layers.uv)
-    #Convert Blender's Mesh(bmesh) to DisplayList
     vtx_cnt = len(bl_loops)
     print(MSG_INFO_DATA.format('Vertex Count', vtx_cnt))
     for loop in face.loops:
-        bm_vtx = loop.vert
-        #Vertex
-        vtx = generate_vertex(bm_vtx, loop, bl_loops, bm, bl_tex_slots, obj)
-        
+        vtx = generate_vertex(loop.vert, loop, bl_loops, bm, bl_tex_slots, obj)
         vertexs.append(vtx)
-    
     strip.vertexs = vertexs
     strip.count = len(vertexs)
-    
     return strip
 
 
-# Generate DisplayList
-def generate_displaylist(bm, mat_idx, bl_loops, bl_tex_slots, obj, attribute):
+def generate_displaylist(bm: bmesh.types.BMesh, mat_idx: int, bl_loops: list, bl_tex_slots: list, obj: bpy.types.Object, attribute: Attribute) -> DisplayList:
     dlist = DisplayList()
-    
     for face in bm.faces:
-        if (face.material_index == mat_idx):
+        if face.material_index == mat_idx:
             strip = generate_strip(bm, face, bl_loops, bl_tex_slots, obj, attribute)
             dlist.strips.append(strip)
-    
     return dlist
 
-# Generate DisplatListHeader
+
 def generate_displaylistheader():
     dlist_header = DisplatListHeader()
-    
-    trans_mtxs = []
-    for i in range(8):
-        idx = -1
-        trans_mtxs.append(idx)
+    trans_mtxs = [-1] * 8
     sizes = [0x00, 0x00]
     dlist_header.trans_mtxs = trans_mtxs
     dlist_header.dlist_sizes = sizes
-    
     return dlist_header
 
-# Generate Submesh
-def generate_submesh(attribute, bm, obj, bl_mat, tex_idx, mat_idx, bl_loops):
+
+def generate_submesh(attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl_mat: bpy.types.Material, tex_idx: int, mat_idx: int, bl_loops: list) -> Submesh:
     print('-Submesh')
     submesh = Submesh()
 
-    dlist_headers = []
     dlist_header = generate_displaylistheader()
-    dlist_headers.append(dlist_header)
+    submesh.dlist_headers = [dlist_header]
 
-    mat_name = bl_mat.name
-    bl_tex_slots = list(filter(None, bpy.data.materials[mat_name].texture_slots)) # removes None
+    bl_tex_slots = _get_tex_settings_for_material(bl_mat.material)
 
     submesh.material = generate_matrial(bm, bl_mat, bl_tex_slots, tex_idx)
-    submesh.dlist_headers = dlist_headers
     submesh.boundingsphere_origin = bl_mat.material.gcmf_material.boundingsphere_origin
     submesh.unk0x3C = bl_mat.material.gcmf_material.unk0x3C
     val = 0x00
     max_bit = len(bl_mat.material.gcmf_material.unk0x40) - 1
-    for i, unk0x40 in enumerate(bl_mat.material.gcmf_material.unk0x40):
-        val += (unk0x40.real << (max_bit - i))
+    for i, b in enumerate(bl_mat.material.gcmf_material.unk0x40):
+        val += (int(b) << (max_bit - i))
     submesh.unk0x40 = val
 
-    # this must be loop (for multiple submesh)
     dlist = generate_displaylist(bm, mat_idx, bl_loops, bl_tex_slots, obj, attribute)
     submesh.dlists.append(dlist)
-    
+
     return submesh
 
-#Generate GCMF Attribute
-def generate_attribute(bl_gcfm_attribute):
-    attribute = Attribute()
 
+# ---------------------------------------------------------------------------
+# GCMF Attribute
+# ---------------------------------------------------------------------------
+
+def generate_attribute(bl_gcfm_attribute: str) -> Attribute:
+    attribute = Attribute()
     if bl_gcfm_attribute == 'is_16bit':
         attribute.is_16bit = True
     elif bl_gcfm_attribute == 'is_stiching':
@@ -369,133 +359,140 @@ def generate_attribute(bl_gcfm_attribute):
         attribute.is_skin = True
     elif bl_gcfm_attribute == 'is_effective':
         attribute.is_effective = True
-
     return attribute
 
-#Generate Gcmf Object from mesh
-def generate_gcmf(obj, idx):
+
+# ---------------------------------------------------------------------------
+# GCMF object
+# ---------------------------------------------------------------------------
+def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     print(MSG_INFO_INIT.format('Generate GCMF'))
     gcmf = Gcmf()
-    
+
     gcmf.attribute = generate_attribute(obj.gcmf_object.attribute)
     gcmf.origin = [obj.location[0], obj.location[1], obj.location[2]]
-    
-    #Radius
     gcmf.boundspher_radius = max(obj.dimensions)
+
     opaque_count = 0
     transparent_count = 0
-    
-    # Texture
-    # this must be loop by Texture(blender ones) in each Material(blender ones)
-    img_names = []
-    for image in bpy.data.images:
-        img_names.append(image.name)
+
+    img_names = [img.name for img in bpy.data.images]
+
     for bl_mat in bpy.data.objects[obj.name].material_slots:
-        if (bl_mat.material.use_transparency):
-            transparent_count = transparent_count + 1
-        
-        for i, bl_tex in enumerate(bpy.data.materials[bl_mat.name].texture_slots):
-            if bl_tex == None:
-                #Texture is "None"
-                break
-            if i > 2:
-                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
-                break
-            idx = len(gcmf.textures)
-            texture = generate_texture(bl_tex, img_names, idx)
-            gcmf.textures.append(texture)
-    
+        mat = bl_mat.material
+        if mat is None:
+            continue
+        # Transparency: check blend_method (4.x) or alpha < 1 in BSDF
+        is_transparent = False
+        # TODO: QUIT THIS. "Transparency Count" on Object.
+        if hasattr(mat, 'blend_method') and mat.blend_method in ('BLEND', 'HASHED', 'CLIP'):
+            is_transparent = True
+        elif mat.gcmf_material.transparency < 0xFF:
+            is_transparent = True
+        if is_transparent:
+            transparent_count += 1
+
+#        ts_list = _get_tex_settings_for_material(mat)
+#        for i, ts in enumerate(ts_list):
+#            if i > 2:
+#                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
+#                break
+#            curr_idx = len(gcmf.textures)
+#            texture = generate_texture(ts, curr_idx)
+#            gcmf.textures.append(texture)
+
     print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
     opaque_count = len(obj.material_slots) - transparent_count
-    
-    #Submesh
+
+    # Submesh
     bm = bmesh.new()
-    
-    #Convert to Triangles
-    triangulate = False 
-    for modifier in obj.modifiers:
-        if (modifier.type == 'TRIANGULATE'):
-            triangulate = True
-    if (triangulate == False):
-        #Add 'Triangulate' modifier
+
+    # Triangulate via evaluated mesh (replaces deprecated obj.to_mesh(scene, True, ...))
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(depsgraph)
+
+    # Ensure Triangulate modifier
+    triangulate = any(m.type == 'TRIANGULATE' for m in obj.modifiers)
+    if not triangulate:
         bpy.ops.object.modifier_add(type='TRIANGULATE')
-    #Generate "Mesh" with aplly Moddifier
-    bl_mesh = obj.to_mesh( bpy.context.scene, True,\
-                        calc_tessface=False, settings='RENDER' \
-                        )
-    if (triangulate == False):
-        #Remove 'Triangulate' modifier
-        bpy.ops.object.modifier_remove(modifier='Triangulate')
     
-    #Generate Bmesh
+    bl_mesh = obj_eval.to_mesh()
+    
+    if not triangulate:
+        # Remove 'Triangulate' modifier
+        bpy.ops.object.modifier_remove(modifier='Triangulate')
+
+    # Generate Bmesh
     bm.from_mesh(bl_mesh)
-    #Apply Transform (Scale/Rotation/Translation)
+    # Apply Transform (Scale/Rotation/Translation)
     bmesh.ops.transform(bm, matrix=obj.matrix_world, verts=bm.verts)
-    #Rotate -90 deg (Swap Y-axis and Z-axis)
+    # Rotate -90 deg (Swap Y-axis and Z-axis)
     rot = mathutils.Matrix.Rotation(math.radians(-90), 4, (1.0, 0.0, 0.0))
     bmesh.ops.rotate(bm, cent=(0.0, 0.0, 0.0), matrix=rot, verts=bm.verts)
-     #Convert to Triangles
+    # Convert to Triangles
     bmesh.ops.triangulate(bm, faces=bm.faces)
-    
+
     bm.to_mesh(bl_mesh)
-    #Generat custom-split normals
-    bl_mesh.use_auto_smooth = True
+
+    # Normals
+    if hasattr(bl_mesh, 'use_auto_smooth'):
+        bl_mesh.use_auto_smooth = True
     bl_mesh.calc_normals_split()
     bl_loops = bl_mesh.loops
+
     tex_idx = 0
     for mat_idx, bl_mat in enumerate(obj.material_slots):
         submesh = generate_submesh(gcmf.attribute, bm, obj, bl_mat, tex_idx, mat_idx, bl_loops)
         gcmf.submeshs.append(submesh)
         tex_idx = tex_idx + submesh.material.material_count
-    
+
 #    # Matrix
 #    for i in range(1):
 #        mtx = generate_matrix()
 #        gcmf.mtxs.append(mtx)
     
-    mtx_idxs = []
-    for i in range(8):
-        mtx_idxs.append(-1)
+    mtx_idxs = [-1] * 8
+    
     gcmf.mtx_idxs = mtx_idxs
-    
-    # flash bmesh
+
+    obj_eval.to_mesh_clear()
     del bm
-    
+
     gcmf.texture_count = len(gcmf.textures)
     gcmf.opaque_count = opaque_count
     gcmf.transparent_count = transparent_count
-    
+
     return gcmf
 
-#Generate GcmfEntry
-def generate_gcmfentry(obj, idx):
+
+def generate_gcmfentry(obj: bpy.types.Object, idx: int) -> GcmfEntry:
     entry = GcmfEntry()
     entry.gcmf = generate_gcmf(obj, idx)
     entry.name = obj.name
-    
     return entry
 
-#Export gma
-def save(filepath, little_endian=False):
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def save(filepath: str, little_endian=False):
     with open(filepath, 'wb') as file:
-        #Set Endian
-        if little_endian == True:
-            sel_endian = '<'
-        else:
-            sel_endian = '>' 
-        
+        sel_endian = '<' if little_endian else '>'
+
         gma = Gma()
-        #Sorting by index of GCMF_Object
-        sorted_bl_objs = sorted(bpy.context.selected_objects, key=lambda bl_obj: bl_obj.gcmf_object.index)
+        # Sorting by index of GCMF_Object
+        sorted_bl_objs = sorted(
+            bpy.context.selected_objects,
+            key=lambda bl_obj: bl_obj.gcmf_object.index
+        )
         for i, obj in enumerate(sorted_bl_objs):
-            if (len(obj.material_slots) < 1):
+            if len(obj.material_slots) < 1:
                 print(MSG_WARN_NONE_MAT.format(obj.name))
-                #Skip Mesh Export
+                # Skip Mesh Export
                 continue
-            #gcmf entry
+                # gcmf entry
             entry = generate_gcmfentry(obj, i)
             gma.entrys.append(entry)
-            
+
         gma.pack(file, sel_endian)
-    
-    file.close()
