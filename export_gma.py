@@ -134,41 +134,41 @@ def generate_vat(bl_mat, bm):
     
     #Color
     clr_count = len(bm.loops.layers.color)
-    if bl_mat.material.use_vertex_color_paint == True:
-        #Enable Vertex-Color
-        if clr_count != 0:
-            if clr_count > 0:
-                vat.gx_va_clr0 = True
-            if clr_count > 1:
-                print(MSG_WARN_MANY.format(1, 'VERTEX-COLOR', clr_count))
-                vat.gx_va_clr1 = True
-            if clr_count > 2:
-                 print(MSG_WARN_TOO_MANY.format('VERTEX-COLOR', clr_count, 2))
+#    if bl_mat.material.use_vertex_color_paint == True:
+#        #Enable Vertex-Color
+#        if clr_count != 0:
+#            if clr_count > 0:
+#                vat.gx_va_clr0 = True
+#            if clr_count > 1:
+#                print(MSG_WARN_MANY.format(1, 'VERTEX-COLOR', clr_count))
+#                vat.gx_va_clr1 = True
+#            if clr_count > 2:
+#                 print(MSG_WARN_TOO_MANY.format('VERTEX-COLOR', clr_count, 2))
     #TEX0~7
-    vat.gx_va_tex0 = True # force export UV0
-    tex_slot = list(filter(None, bl_mat.material.texture_slots)) # removes None
-    uv_count = len(tex_slot)
-    if uv_count == 0:
-        #UV is not exsit
-        print(MSG_WARN_NONE_UV)
-    else:
-        if uv_count > 1:
-            vat.gx_va_tex1 = True
-        if uv_count > 2:
-            vat.gx_va_tex2 = True
-        if uv_count > 3:
-            print(MSG_WARN_MANY.format(3, 'UV', uv_count))
-            vat.gx_va_tex3 = True
-        if uv_count > 4:
-            vat.gx_va_tex4 = True
-        if uv_count > 5:
-            vat.gx_va_tex5 = True
-        if uv_count > 6:
-            vat.gx_va_tex6 = True
-        if uv_count > 7:
-            vat.gx_va_tex7 = True
-        if uv_count > 8:
-            print(MSG_WARN_TOO_MANY.format('UV', uv_count, 7))
+#    vat.gx_va_tex0 = True # force export UV0
+#    tex_slot = list(filter(None, bl_mat.material.texture_slots)) # removes None
+#    uv_count = len(tex_slot)
+#    if uv_count == 0:
+#        #UV is not exsit
+#        print(MSG_WARN_NONE_UV)
+#    else:
+#        if uv_count > 1:
+#            vat.gx_va_tex1 = True
+#        if uv_count > 2:
+#            vat.gx_va_tex2 = True
+#        if uv_count > 3:
+#            print(MSG_WARN_MANY.format(3, 'UV', uv_count))
+#            vat.gx_va_tex3 = True
+#        if uv_count > 4:
+#            vat.gx_va_tex4 = True
+#        if uv_count > 5:
+#            vat.gx_va_tex5 = True
+#        if uv_count > 6:
+#            vat.gx_va_tex6 = True
+#        if uv_count > 7:
+#            vat.gx_va_tex7 = True
+#        if uv_count > 8:
+#            print(MSG_WARN_TOO_MANY.format('UV', uv_count, 7))
 
     return vat
 

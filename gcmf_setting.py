@@ -1,5 +1,19 @@
 import bpy
 
+# GCMF Object Setting
+class GCMF_ObjectSetting(bpy.types.PropertyGroup):
+    gcmf_attribute_enum = [
+        ("default",      "Basic Model",     "", 0),
+        ("is_16bit",     "16Bit",           "", 1),
+        ("is_stiching",  "Stitching Model", "not supports", 2),
+        ("is_skin",      "Skin Model",      "not supports", 3),
+        ("is_effective", "Effective Model", "not supports", 4)
+    ]
+
+    index: bpy.props.IntProperty(name="index", default=0x00, min=-0xFFFF, max=0xFFFF)
+    attribute: bpy.props.EnumProperty(items=gcmf_attribute_enum, default="default")
+
+
 # ---- Texture Settings (formerly bpy.types.Texture.gcmf_texture) ----
 # bpy.types.Texture was removed in Blender 4.x.
 # Each material now holds a collection of GCMF_TextureSetting via gcmf_textures[].
@@ -40,25 +54,15 @@ class GCMF_TextureSetting(bpy.types.PropertyGroup):
     unk0x10: bpy.props.BoolVectorProperty(name="unk0x10",
                                            default=tuple(_unk0x10_default),
                                            subtype='NONE', size=32)
-    # Image name reference (replaces bpy.types.Texture image link)
-    image_name: bpy.props.StringProperty(name="image_name", default="")
-    # UV wrap mode cached for convenience
-    extension: bpy.props.StringProperty(name="extension", default="EXTEND")
-    use_mirror_x: bpy.props.BoolProperty(name="use_mirror_x", default=False)
-    use_mirror_y: bpy.props.BoolProperty(name="use_mirror_y", default=False)
+    
+    show_unk0x00: bpy.props.BoolProperty(name="unk0x00", default=False)
+    show_mipmap: bpy.props.BoolProperty(name="MIPMAP", default=False)
+    show_uv_wrap: bpy.props.BoolProperty(name="UV WRAP", default=False)
+    show_anisotropy: bpy.props.BoolProperty(name="Anisotropy", default=False)
+    show_unk0x0C: bpy.props.BoolProperty(name="unk0x0C", default=False)
+    show_is_swappable: bpy.props.BoolProperty(name="is_swappable", default=False)
+    show_unk0x10: bpy.props.BoolProperty(name="unk0x10", default=False)
 
-# GCMF Object Setting
-class GCMF_ObjectSetting(bpy.types.PropertyGroup):
-    gcmf_attribute_enum = [
-        ("default",      "Basic Model",     "", 0),
-        ("is_16bit",     "16Bit",           "", 1),
-        ("is_stiching",  "Stitching Model", "not supports", 2),
-        ("is_skin",      "Skin Model",      "not supports", 3),
-        ("is_effective", "Effective Model", "not supports", 4)
-    ]
-
-    index: bpy.props.IntProperty(name="index", default=0x00, min=-0xFFFF, max=0xFFFF)
-    attribute: bpy.props.EnumProperty(items=gcmf_attribute_enum, default="default")
 
 # GCMF Material Setting
 class GCMF_MaterialSetting(bpy.types.PropertyGroup):
@@ -88,9 +92,14 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
                                            default=tuple(_unk0x40_default),
                                            subtype='NONE', size=32)
 
-    # Flag: whether GCMF values were loaded from file (keep_values branch)
-    is_keep: bpy.props.BoolProperty(name="is_keep", default=False)
+    show_unk0x40: bpy.props.BoolProperty(name="unk0x40", default=False)
+
+#    # Flag: whether GCMF values were loaded from file (keep_values branch)
+#    is_keep: bpy.props.BoolProperty(name="is_keep", default=False)
 
     # Per-texture settings stored as a CollectionProperty
     # (replaces the old bpy.types.Texture approach)
     gcmf_textures: bpy.props.CollectionProperty(type=GCMF_TextureSetting)
+    
+    show_gcmf_textures: bpy.props.BoolVectorProperty(name="Textures", default=(False,)*3)
+    show_gcmf_textures_edit: bpy.props.BoolVectorProperty(name="Textures Edit", default=(False,)*3)

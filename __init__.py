@@ -124,16 +124,16 @@ classes = (
     EXPORT_UL_GMA,
 #    IMPORT_UL_GML,
     #CustomProperty
-    gcmf_setting.GCMF_TextureSetting,
     gcmf_setting.GCMF_ObjectSetting,
+    gcmf_setting.GCMF_TextureSetting,
     gcmf_setting.GCMF_MaterialSetting,
     #Panel
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
+    gcmf_editor.OBJECT_PT_GCMF_Object_Editor,
     gcmf_editor.OBJECT_PT_GCMF_Material_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Material_Editor,
-    gcmf_editor.OBJECT_PT_GCMF_Object_Editor,
-#    gcmf_editor.OBJECT_PT_GCMF_Texture_Viewer,
-#    gcmf_editor.OBJECT_PT_GCMF_Texture_Editor
+    gcmf_editor.OBJECT_PT_GCMF_Texture_Viewer,
+    gcmf_editor.OBJECT_PT_GCMF_Texture_Editor,
 )
 
 

@@ -74,7 +74,6 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
 
     # ---- Store original GCMF values ----
     gcmf_material = mat.gcmf_material
-    gcmf_material.is_keep = True
     gcmf_material.unk0x02 = convert_value2flags(material.unk0x02, gcmf_material.unk0x02)
     gcmf_material.unk0x03 = convert_value2flags(material.unk0x03, gcmf_material.unk0x03)
     gcmf_material.color0 = material.color0
@@ -146,7 +145,6 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
                     img_name = NAME_TPL_COMMON.format(img_id)
                 else:
                     img_name = NAME_TPL.format(img_id)
-                ts.image_name = img_name
                 img = _get_or_create_image(images, img_name)
 
                 # Wire first texture into the BSDF for a basic preview
