@@ -2,7 +2,7 @@ import bpy
 
 # ---- Texture Settings (formerly bpy.types.Texture.gcmf_texture) ----
 # bpy.types.Texture was removed in Blender 4.x.
-# Each material now holds a collection of GCMF_TextureSetting via tex_settings[].
+# Each material now holds a collection of GCMF_TextureSetting via gcmf_textures[].
 
 class GCMF_TextureSetting(bpy.types.PropertyGroup):
     unk0x00: bpy.props.BoolVectorProperty(name="unk0x00",
@@ -87,11 +87,10 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
     unk0x40: bpy.props.BoolVectorProperty(name="unk0x40",
                                            default=tuple(_unk0x40_default),
                                            subtype='NONE', size=32)
-""""
+
     # Flag: whether GCMF values were loaded from file (keep_values branch)
     is_keep: bpy.props.BoolProperty(name="is_keep", default=False)
 
     # Per-texture settings stored as a CollectionProperty
     # (replaces the old bpy.types.Texture approach)
-    tex_settings: bpy.props.CollectionProperty(type=GCMF_TextureSetting)
-"""
+    gcmf_textures: bpy.props.CollectionProperty(type=GCMF_TextureSetting)

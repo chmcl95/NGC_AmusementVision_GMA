@@ -179,10 +179,10 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
         except:
             pass # do nothing
 
-"""
+
 # GCMF Texture Setting Show Panel
 # bpy.types.Texture is gone in Blender 4.x.
-# These panels now show texture settings from the active material's tex_settings collection.
+# These panels now show texture settings from the active material's gcmf_textures collection.
 
 class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
     bl_idname = NAME_ID_PROPERTY_VIEWER_BASE.format('Texture')
@@ -194,15 +194,15 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
     def draw(self, context):
         try:
             mat = bpy.context.active_object.active_material
-            gcmf_material = mat.gcmf_material
-            tex_settings = gcmf_material.tex_settings
+            _gcmf_material = mat.gcmf_material
+            _gcmf_textures = _gcmf_material.gcmf_textures
 
             # unk0x00
-            if len(tex_settings) == 0:
+            if len(_gcmf_textures) == 0:
                 self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
                 return
 
-            for idx, gcmf_texture in enumerate(tex_settings):
+            for idx, gcmf_texture in enumerate(_gcmf_textures):
                 box = self.layout.box()
                 box.label(text="Texture [{}]  img: {}".format(idx, gcmf_texture.image_name))
 
@@ -254,14 +254,14 @@ class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
     def draw(self, context):
         try:
             mat = bpy.context.active_object.active_material
-            gcmf_material = mat.gcmf_material
-            tex_settings = gcmf_material.tex_settings
+            _gcmf_material = mat.gcmf_material
+            _gcmf_textures = _gcmf_material.gcmf_textures
 
-            if len(tex_settings) == 0:
+            if len(_gcmf_textures) == 0:
                 self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
                 return
 
-            for idx, gcmf_texture in enumerate(tex_settings):
+            for idx, gcmf_texture in enumerate(_gcmf_textures):
                 box = self.layout.box()
                 box.label(text="Texture [{}]".format(idx))
 
@@ -325,4 +325,3 @@ class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
         # If faild to get "gcmf_texture" from active Texture
         except:
             pass #do nothing
-"""

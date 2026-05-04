@@ -32,9 +32,9 @@ def convert_flags2value(src_flags):
 # ---------------------------------------------------------------------------
 # Texture helpers
 # ---------------------------------------------------------------------------
-#def _get_tex_settings_for_material(bl_mat):
-#    """Return list of GCMF_TextureSetting items from the material's collection."""
-#    return list(bl_mat.gcmf_material.tex_settings)
+def _get_gcmf_textures_for_material(bl_mat):
+    """Return list of GCMF_TextureSetting items from the material's collection."""
+    return list(bl_mat.gcmf_material.gcmf_textures)
 
 # Generate UV-Wrap
 # GMA    : Blender
@@ -43,7 +43,7 @@ def convert_flags2value(src_flags):
 # MIRROR : REPEAT and MIRROR
 # Blender can't set x and y repeat falgs unique
 def generate_uvwrap(ts):
-    """Rebuild uv_wrap flags from the cached extension/mirror fields in tex_settings."""
+    """Rebuild uv_wrap flags from the cached extension/mirror fields in gcmf_textures."""
     uv_wrap = [False] * len(ts.uv_wrap)
 
     if ts.extension == 'REPEAT':
@@ -177,7 +177,7 @@ def generate_vat(bl_mat, bm):
 # Material
 # ---------------------------------------------------------------------------
 
-def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, bl_tex_slots: list, tex_idx: int) -> Material:
+def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx: int) -> Material:
     print('-Material')
     material = Material()
 
@@ -186,9 +186,12 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, bl_tex_s
     vtx_render = VertexRenderFlag()
     vtx_render.dlist0_0 = True
 
+    # Well, Is it OK to give up texture index calclations?
+    # if "yes" activate UNDER code.
+#    texture_indexs = [bl_mat.gcmf_material.texture_index[0], bl_mat.gcmf_material.texture_index[1], bl_mat.gcmf_material.texture_index[2]]
     texture_indexs = [-1, -1, -1]
     tex_count = 0
-    tex_slots_count = len(bl_tex_slots)
+    tex_slots_count = len(bl_mat.gcmf_material.gcmf_textures)
     if tex_slots_count > 3:
         print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_slots_count, 3))
     if tex_slots_count > 0:
@@ -328,9 +331,7 @@ def generate_submesh(attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl
     dlist_header = generate_displaylistheader()
     submesh.dlist_headers = [dlist_header]
 
-    bl_tex_slots = _get_tex_settings_for_material(bl_mat.material)
-
-    submesh.material = generate_matrial(bm, bl_mat, bl_tex_slots, tex_idx)
+    submesh.material = generate_matrial(bm, bl_mat, tex_idx)
     submesh.boundingsphere_origin = bl_mat.material.gcmf_material.boundingsphere_origin
     submesh.unk0x3C = bl_mat.material.gcmf_material.unk0x3C
     val = 0x00
@@ -339,7 +340,7 @@ def generate_submesh(attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl
         val += (int(b) << (max_bit - i))
     submesh.unk0x40 = val
 
-    dlist = generate_displaylist(bm, mat_idx, bl_loops, bl_tex_slots, obj, attribute)
+    dlist = generate_displaylist(bm, mat_idx, bl_loops, bl_mat.gcmf_material.gcmf_textures, obj, attribute)
     submesh.dlists.append(dlist)
 
     return submesh
@@ -392,7 +393,7 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
         if is_transparent:
             transparent_count += 1
 
-#        ts_list = _get_tex_settings_for_material(mat)
+#        ts_list = _get_gcmf_textures_for_material(mat)
 #        for i, ts in enumerate(ts_list):
 #            if i > 2:
 #                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
@@ -407,20 +408,10 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     # Submesh
     bm = bmesh.new()
 
-    # Triangulate via evaluated mesh (replaces deprecated obj.to_mesh(scene, True, ...))
+    # Triangulate via evaluated mesh
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_eval = obj.evaluated_get(depsgraph)
-
-    # Ensure Triangulate modifier
-    triangulate = any(m.type == 'TRIANGULATE' for m in obj.modifiers)
-    if not triangulate:
-        bpy.ops.object.modifier_add(type='TRIANGULATE')
-    
     bl_mesh = obj_eval.to_mesh()
-    
-    if not triangulate:
-        # Remove 'Triangulate' modifier
-        bpy.ops.object.modifier_remove(modifier='Triangulate')
 
     # Generate Bmesh
     bm.from_mesh(bl_mesh)
@@ -437,7 +428,6 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     # Normals
     if hasattr(bl_mesh, 'use_auto_smooth'):
         bl_mesh.use_auto_smooth = True
-    bl_mesh.calc_normals_split()
     bl_loops = bl_mesh.loops
 
     tex_idx = 0

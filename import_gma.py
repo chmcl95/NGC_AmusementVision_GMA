@@ -40,8 +40,6 @@ class Mesh_data:
         self.tex6s = []
         self.tex7s = []
 
-# TODO: dest_flags to int value.
-# Am I mad? throwing length of destination list.
 def convert_value2flags(value: int, dest_flags: list):
     max_bit = len(dest_flags)
     flags = [False] * max_bit
@@ -65,10 +63,10 @@ def _get_or_create_image(images: bpy.types.BlendDataImages, name: str):
 # Generate Blender's Material
 # ---------------------------------------------------------------------------
 
-def generate_material(material: Material, matid: int, gcmf_texs_data, images, is_alpha: bool):
+def generate_material(material: Material, matid: int, gcmf_texs_data: list, images, is_alpha: bool):
     """
     Create a Blender material and populate gcmf_material custom properties.
-    Textures are stored in gcmf_material.tex_settings collection; images are
+    Textures are stored in gcmf_material.gcmf_textures collection; images are
     wired into a Principled BSDF node tree for basic viewport preview.
     """
     mat = bpy.data.materials.new(name=NAME_MATERIAL.format(matid))
@@ -115,51 +113,51 @@ def generate_material(material: Material, matid: int, gcmf_texs_data, images, is
         if texid < 0:
             continue
 
-#        # Append a new slot in the collection
-#        ts = gcmf_material.tex_settings.add()
-#        raw_tex = gcmf_texs_data[texid] if texid < len(gcmf_texs_data) else None
-#        if raw_tex is not None:
-#            ts.unk0x00 = convert_value2flags(raw_tex.unk0x00, ts.unk0x00)
-#            ts.mipmap = convert_value2flags(raw_tex.mipmap, ts.mipmap)
-#            ts.uv_wrap = convert_value2flags(raw_tex.uv_wrap, ts.uv_wrap)
-#            ts.texture_index = raw_tex.texture_index
-#            ts.unk0x06 = raw_tex.unk0x06
-#            ts.anisotropy = convert_value2flags(raw_tex.anisotropy, ts.anisotropy)
-#            ts.unk0x0C = convert_value2flags(raw_tex.unk0x0C, ts.unk0x0C)
-#            ts.is_swappable = convert_value2flags(raw_tex.is_swappable, ts.is_swappable)
-#            ts.unk0x10 = convert_value2flags(raw_tex.unk0x10, ts.unk0x10)
-#
-#            # UV wrap convenience cache
-#            uv = ts.uv_wrap
-#            if uv[Texture_Wrap.MIRROR_X]:
-#                ts.use_mirror_x = True
-#            if uv[Texture_Wrap.MIRROR_Y]:
-#                ts.use_mirror_y = True
-#            if (uv[Texture_Wrap.REPEAT_X] or uv[Texture_Wrap.REPEAT_Y] or
-#                    uv[Texture_Wrap.MIRROR_X] or uv[Texture_Wrap.MIRROR_Y]):
-#                ts.extension = 'REPEAT'
-#            else:
-#                ts.extension = 'EXTEND'
-#
-#            # Image name
-#            img_id = raw_tex.texture_index
-#            if img_id >= 0:
-#                if ts.unk0x00[Texture_Flags0x00.COMMON_TEX]:
-#                    img_name = NAME_TPL_COMMON.format(img_id)
-#                else:
-#                    img_name = NAME_TPL.format(img_id)
-#                ts.image_name = img_name
-#                img = _get_or_create_image(images, img_name)
-#
-#                # Wire first texture into the BSDF for a basic preview
-#                if i == 0:
-#                    tex_node = nodes.new('ShaderNodeTexImage')
-#                    tex_node.image = img
-#                    tex_node.location = (tex_x_offset, 200)
-#                    links.new(tex_node.outputs['Color'], bsdf.inputs['Base Color'])
-#                    if is_alpha:
-#                        links.new(tex_node.outputs['Alpha'], bsdf.inputs['Alpha'])
-#                    tex_x_offset -= 300
+        # Append a new slot in the collection
+        ts = gcmf_material.gcmf_textures.add()
+        raw_tex = gcmf_texs_data[texid] if texid < len(gcmf_texs_data) else None
+        if raw_tex is not None:
+            ts.unk0x00 = convert_value2flags(raw_tex.unk0x00, ts.unk0x00)
+            ts.mipmap = convert_value2flags(raw_tex.mipmap, ts.mipmap)
+            ts.uv_wrap = convert_value2flags(raw_tex.uv_wrap, ts.uv_wrap)
+            ts.texture_index = raw_tex.texture_index
+            ts.unk0x06 = raw_tex.unk0x06
+            ts.anisotropy = convert_value2flags(raw_tex.anisotropy, ts.anisotropy)
+            ts.unk0x0C = convert_value2flags(raw_tex.unk0x0C, ts.unk0x0C)
+            ts.is_swappable = convert_value2flags(raw_tex.is_swappable, ts.is_swappable)
+            ts.unk0x10 = convert_value2flags(raw_tex.unk0x10, ts.unk0x10)
+
+            # UV wrap convenience cache
+            uv = ts.uv_wrap
+            if uv[Texture_Wrap.MIRROR_X]:
+                ts.use_mirror_x = True
+            if uv[Texture_Wrap.MIRROR_Y]:
+                ts.use_mirror_y = True
+            if (uv[Texture_Wrap.REPEAT_X] or uv[Texture_Wrap.REPEAT_Y] or
+                    uv[Texture_Wrap.MIRROR_X] or uv[Texture_Wrap.MIRROR_Y]):
+                ts.extension = 'REPEAT'
+            else:
+                ts.extension = 'EXTEND'
+
+            # Image name
+            img_id = raw_tex.texture_index
+            if img_id >= 0:
+                if ts.unk0x00[Texture_Flags0x00.COMMON_TEX]:
+                    img_name = NAME_TPL_COMMON.format(img_id)
+                else:
+                    img_name = NAME_TPL.format(img_id)
+                ts.image_name = img_name
+                img = _get_or_create_image(images, img_name)
+
+                # Wire first texture into the BSDF for a basic preview
+                if i == 0:
+                    tex_node = nodes.new('ShaderNodeTexImage')
+                    tex_node.image = img
+                    tex_node.location = (tex_x_offset, 200)
+                    links.new(tex_node.outputs['Color'], bsdf.inputs['Base Color'])
+                    if is_alpha:
+                        links.new(tex_node.outputs['Alpha'], bsdf.inputs['Alpha'])
+                    tex_x_offset -= 300
 
     return mat
 

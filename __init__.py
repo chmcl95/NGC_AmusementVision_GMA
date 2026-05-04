@@ -124,9 +124,9 @@ classes = (
     EXPORT_UL_GMA,
 #    IMPORT_UL_GML,
     #CustomProperty
+    gcmf_setting.GCMF_TextureSetting,
     gcmf_setting.GCMF_ObjectSetting,
     gcmf_setting.GCMF_MaterialSetting,
-    gcmf_setting.GCMF_TextureSetting,
     #Panel
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Material_Viewer,
@@ -148,8 +148,6 @@ def register():
         bpy.props.PointerProperty(type=gcmf_setting.GCMF_ObjectSetting)
     bpy.types.Material.gcmf_material = \
         bpy.props.PointerProperty(type=gcmf_setting.GCMF_MaterialSetting)
-#    bpy.types.Material.gcmf_material.tex_settings = \
-#        bpy.props.PointerProperty( type=gcmf_setting.GCMF_TextureSetting )
     
 
 def unregister():
@@ -158,7 +156,6 @@ def unregister():
 
     del bpy.types.Object.gcmf_object
     del bpy.types.Material.gcmf_material
-#    del bpy.types.Material.gcmf_material.tex_settings
 
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
