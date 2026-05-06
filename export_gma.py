@@ -32,51 +32,8 @@ def convert_flags2value(src_flags):
 
 
 # ---------------------------------------------------------------------------
-# Texture helpers
-# ---------------------------------------------------------------------------
-def _get_gcmf_textures_for_material(bl_mat):
-    """Return list of GCMF_TextureSetting items from the material's collection."""
-    return list(bl_mat.gcmf_material.gcmf_textures)
-
-# Generate UV-Wrap
-# GMA    : Blender
-# CLAMP  : EXTEND
-# REPEAT : REPEAT
-# MIRROR : REPEAT and MIRROR
-# Blender can't set x and y repeat falgs unique
-def generate_uvwrap(ts):
-    """Rebuild uv_wrap flags from the cached extension/mirror fields in gcmf_textures."""
-    uv_wrap = [False] * len(ts.uv_wrap)
-
-    if ts.extension == 'REPEAT':
-        uv_wrap[Texture_Wrap.REPEAT_X] = True
-        uv_wrap[Texture_Wrap.MIRROR_X] = False
-        uv_wrap[Texture_Wrap.REPEAT_Y] = True
-        uv_wrap[Texture_Wrap.MIRROR_Y] = False
-
-    if ts.use_mirror_x:
-        uv_wrap[Texture_Wrap.REPEAT_X] = False
-        uv_wrap[Texture_Wrap.MIRROR_X] = True
-
-    if ts.use_mirror_y:
-        uv_wrap[Texture_Wrap.REPEAT_Y] = False
-        uv_wrap[Texture_Wrap.MIRROR_Y] = True
-
-    ts.uv_wrap = uv_wrap
-
-
-# ---------------------------------------------------------------------------
-# Generate Mipmap
-# ---------------------------------------------------------------------------
-def generate_mipmap(ts):
-    mipmap = [False] * len(ts.mipmap)
-    mipmap[Texture_Mipmap.ENABLE] = True
-    mipmap[Texture_Mipmap.UNKNOWN1] = True
-    mipmap[Texture_Mipmap.UNKNOWN2] = True
-    ts.mipmap = mipmap
-
-
 # Generate Texture
+# ---------------------------------------------------------------------------
 def generate_texture(gcmf_texture_property: GCMF_TextureSetting, idx: int):
     """Convert a GCMF_TextureSetting into a GCMF Texture struct."""
     print('-Texture')
@@ -190,20 +147,16 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx:
 
     gcmf_material_property = bl_mat.gcmf_material
 
-    # Well, Is this OK to give up texture index calclations?
-    # if "yes" activate UNDER code.
-#    texture_indexs = [bl_mat.gcmf_material.texture_index[0], bl_mat.gcmf_material.texture_index[1], bl_mat.gcmf_material.texture_index[2]]
-    texture_indexs = [-1, -1, -1]
     tex_count = 0
-    tex_slots_count = len(gcmf_material_property.gcmf_textures)
-    if tex_slots_count > 3:
-        print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_slots_count, 3))
-    if tex_slots_count > 0:
-        for i in range(3 if tex_slots_count > 2 else tex_slots_count):
-            # over MAX of UV layers
-            texture_indexs[i] = tex_idx + i
-        tex_count = i + 1
-
+    tex_count = len(gcmf_material_property.gcmf_textures)
+    if tex_count > 3:
+        print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_count, 3))
+    texture_indexs = gcmf_material_property.texture_indexes
+    for i, _tex_idx in enumerate(texture_indexs):
+        if i > tex_count:
+            continue
+        if _tex_idx < 0:
+            _tex_idx = tex_idx
     
     val = (int(gcmf_material_property.unk0x02[0].real) << 7)\
         + (int(gcmf_material_property.unk0x02[1].real) << 6)\

@@ -14,6 +14,11 @@ NAME_GXMDLVIEW_MAT_COLOR1 = 'Vertex Shading B (0x08)'
 NAME_GXMDLVIEW_MAT_COLOR2 = 'Specular Tint (0x0C)'
 NAME_GXMDLVIEW_MAT_TRANSPARENCY = 'Transparency (0x10)'
 NAME_GXMDLVIEW_MAT_UNK14 = 'Unknown (0x14)'
+NAME_GXMDLVIEW_MAT_TEXTURE_INDEXS = [
+    'Primary Material Index (Dec) (0x16)',
+    'Secondary Material Index (Dec) (0x18)',
+    'Tertiary Material Index (Dec) (0x1A)'
+]
 NAME_GXMDLVIEW_MAT_BOUND_SPHERE = 'Bounding Spher Center (X, Y, Z)'
 NAME_GXMDLVIEW_MAT_UNK3C = 'Unknown (0x3C)'
 NAME_GXMDLVIEW_MAT_UNK40 = 'Unknown (0x40)'
@@ -25,19 +30,21 @@ NAME_GXMDLVIEW_TEX_UNK0C = 'Unknown (0x0C)'
 NAME_GXMDLVIEW_TEX_UNK10 = 'Unknown (0x10)'
 
 MSG_NOT_FOUND_MATERIAL = 'Press \"New\" Button'
-MSG_NOT_FOUND_TEXTURE = MSG_NOT_FOUND_MATERIAL
+MSG_NOT_FOUND_TEXTURE = 'Press \"New\" Button'
 MSG_HEX_2 = '{0}: {1:02X}'
 MSG_HEX_4 = '{0}: {1:04X}'
 MSG_HEX_8 = '{0}: {1:08X}'
 MSG_LABEL_SHOW = '{0}: {1}'
 MSG_LABEL_EDIT = '{0}:'
 
-def draw_checkbox_row(box: bpy.types.UILayout, data: bpy.types.AnyType, show_property: bool, property :str, label_texts: list[str], label_text: str):
+def draw_checkbox_row(box: bpy.types.UILayout, data: bpy.types.AnyType, show_property: bool, property :str, label_texts: list[str], data_masks: list[bool], label_text: str):
     """Convert a list of boolean flags to a column of checkboxes with labels."""
     box.prop(data, "show_" + property, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
     if show_property:
         _checkbox = box.box()
         for i, label_text in enumerate(label_texts):
+            if not data_masks[i]:
+                continue
             row = _checkbox.row()
             row.prop(data, property, index=i, text=label_text)
 
@@ -49,6 +56,16 @@ def draw_checkbox_column(box: bpy.types.UILayout, data: bpy.types.AnyType, show_
         _checkbox.column_flow(columns=length)
         for i in range(length):
             _checkbox.prop(data, property, index=i, text='')
+
+#def draw_checkbox_column2(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], flags: list[bool], property :str, label_text: str):
+#    show_property = show_propertys[property]
+#    box.prop(data, "show_" + property, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
+#    if show_property:
+#        _checkbox = box.box()
+#        length=len(flags)
+#        _checkbox.column_flow(columns=length)
+#        for i in range(length):
+#            _checkbox.prop(data, property, index=i, text='')
 
 # GCMF Object Setting Show Panel
 class OBJECT_PT_GCMF_Object_Viewer(bpy.types.Panel):
@@ -146,6 +163,10 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             val = (gcmf_material.unk0x14 << 8) + gcmf_material.unk0x15
             self.layout.label(text=MSG_HEX_4.format(NAME_GXMDLVIEW_MAT_UNK14, val))
 
+            for i, texture_idx_label in enumerate(NAME_GXMDLVIEW_MAT_TEXTURE_INDEXS):
+                _texture_idx_text = texture_idx_label + ': ' + ('None' if gcmf_material.texture_indexes[i] < 0 else "{0:X}".format(gcmf_material.texture_indexes[i]))
+                self.layout.label(text=_texture_idx_text)
+
             # These are not "Material"
             # unk0x3C
             self.layout.label(text=MSG_LABEL_SHOW.format(NAME_GXMDLVIEW_MAT_UNK3C,
@@ -157,8 +178,9 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             self.layout.label(text=MSG_HEX_8.format(NAME_GXMDLVIEW_MAT_UNK40, val))
             
         # If faild to get "gcmf_material" from active Material
-        except:
-            self.layout.label(text=MSG_NOT_FOUND_MATERIAL)
+        except Exception as e:
+            self.layout.label(text=f"Error occurred: {e}")
+#            self.layout.label(text=MSG_NOT_FOUND_MATERIAL)
 
 # GCMF Material Setting Edit Panel
 class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
@@ -187,16 +209,36 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
             self.layout.prop(gcmf_material, "transparency", text="transparency")
             self.layout.prop(gcmf_material, "unk0x14", text="unk0x14")
             self.layout.prop(gcmf_material, "unk0x15", text="unk0x15")
+            vtx_descriptor_label = [
+                'unused0 (NOT support)', 'unused1 (NOT support)', 'unused2 (NOT support)', 'unused3 (NOT support)',
+                'unused4 (NOT support)', 'unused5 (NOT support)', 'NBT(NOT support)', 'light (NOT support)',
+                'tex_mtx_array (NOT support)', 'nrm_mtx_array (NOT support)', 'pos_mtx_array (NOT support)', 'tex7 (NOT work on GxModelViewer)',
+                'tex6 (NOT work on GxModelViewer)', 'tex5 (NOT work on GxModelViewer)', 'tex4 (NOT work on GxModelViewer)', 'tex3 (NOT work on GxModelViewer)',
+                'UV2', 'UV1', 'UV0', 'Vertex Color 1 (NOT work on GxModelViewer)',
+                'Vertex Color 0', 'Normal', 'Position', 'tex7mtxidx (NOT support)',
+                'tex6mtxidx (NOT support)', 'tex5mtxidx (NOT support)', 'tex4mtxidx (NOT support)', 'tex3mtxidx (NOT support)',
+                'tex2mtxidx (NOT support)', 'tex1mtxidx (NOT support)', 'tex0mtxidx (NOT support)', 'pnmtxidx (NOT support)'
+            ]
+            vtx_descriptor_mask = [False,] * len(gcmf_material.vertex_descriptor)
+            vtx_descriptor_mask[16] = True
+            vtx_descriptor_mask[17] = True
+            vtx_descriptor_mask[18] = True
+            vtx_descriptor_mask[19] = True
+            vtx_descriptor_mask[20] = True
+#            vtx_descriptor_mask[21] = True
+#            vtx_descriptor_mask[22] = True
+            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_vertex_descriptor, 'vertex_descriptor', vtx_descriptor_label, vtx_descriptor_mask, 'vertex_descriptor')
+            self.layout.label(text=MSG_LABEL_EDIT.format('Texture Indexes'))
+            self.layout.prop(gcmf_material, "texture_indexes", text="values")
+            
 
             #These are not actual "gcmf Material"
             self.layout.label(text=MSG_LABEL_EDIT.format(NAME_GXMDLVIEW_MAT_BOUND_SPHERE))
             self.layout.prop(gcmf_material, "boundingsphere_origin", text="values")
             self.layout.prop(gcmf_material, "unk0x3C", text="unk0x3C")
-#            self.layout.label(text=MSG_LABEL_EDIT.format('unk0x40'))
-#            self.layout.prop(gcmf_material, "unk0x40", text='')
             draw_checkbox_column(self.layout, gcmf_material, gcmf_material.show_unk0x40, gcmf_material.unk0x40, 'unk0x40', 'unk0x40')
-        except:
-            pass # do nothing
+        except Exception as e:
+            self.layout.label(text=f"Error occurred: {e}")
 
 
 # GCMF Texture Setting Show Panel
@@ -264,8 +306,9 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
                     box.label(text=MSG_HEX_8.format(NAME_GXMDLVIEW_TEX_UNK10, val))
 
         # If faild to get "gcmf_textures" from active Texture
-        except:
-            self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
+        except Exception as e:
+            self.layout.label(text=f"Error occurred: {e}")
+#            self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
 
 class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
     bl_parent_id = NAME_ID_PROPERTY_VIEWER_BASE.format('Texture')
@@ -292,19 +335,27 @@ class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
                 if _gcmf_material.show_gcmf_textures_edit[idx]:
                     box = self.layout.box()
                     # unk0x00
-                    draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_unk0x00, gcmf_texture.unk0x00, 'unk0x00', 'unk0x00')
+                    unk0x00_labels = ['',] * len(gcmf_texture.unk0x00)
+                    unk0x00_labels[10] = 'Enable carcmntex.tpl Texture (F-ZERO GX)'
+                    unk0x00_labels[11] = 'Enable normal reflection'
+                    unk0x00_labels_mask = [False,] * len(gcmf_texture.unk0x00)
+                    unk0x00_labels_mask[10] = True
+                    unk0x00_labels_mask[11] = True
+                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_unk0x00, 'unk0x00', unk0x00_labels, unk0x00_labels_mask, 'unk0x00')
                     # mipmap
                     mip_map_labels = [
                         'unknown7', 'unknown6', 'unknown5', 'unknown4',
                         'near', 'unknown2', 'unknown1', 'enable'
                     ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_mipmap, 'mipmap', mip_map_labels, 'MIPMAP')
+                    mip_map_mask = [True,] * len(gcmf_texture.mipmap)
+                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_mipmap, 'mipmap', mip_map_labels, mip_map_mask, 'MIPMAP')
                     # uv_wrap
                     uv_wrap_labels = [
                         'unknown7', 'unknown6', 'Y-Mirror', 'Y-Repeat',
                         'X-Mirror', 'X-Repeat', 'unknown1', 'unknown0'
                     ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_uv_wrap, 'uv_wrap', uv_wrap_labels, 'UV WRAP')
+                    uv_wrap_mask = [True,] * len(gcmf_texture.uv_wrap)
+                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_uv_wrap, 'uv_wrap', uv_wrap_labels, uv_wrap_mask, 'UV WRAP')
                     # texture_index
                     box.label(text=NAME_GXMDLVIEW_TEX_TPL_IDX)
                     box.prop(gcmf_texture, "texture_index", text="value")
@@ -316,7 +367,8 @@ class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
                         'unknown7','unknown6', 'unknown5', 'unknown4',
                         'unknown3', 'aniso4', 'aniso2', 'aniso1'
                     ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_anisotropy, 'anisotropy', anisotropy_labels, 'Anisotropy')
+                    anisotropy_mask = [True,] * len(gcmf_texture.anisotropy)
+                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_anisotropy, 'anisotropy', anisotropy_labels, anisotropy_mask, 'Anisotropy')
                     # unk0x0C
                     draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_unk0x0C, gcmf_texture.unk0x0C, 'unk0x0C', NAME_GXMDLVIEW_TEX_UNK0C)
                     # is Swappable
@@ -326,5 +378,4 @@ class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
 
         # If faild to get "gcmf_texture" from active Texture
         except Exception as e:
-            print(f"Error occurred: {e}")
-#            pass #do nothing
+            self.layout.label(text=f"Error occurred: {e}")
