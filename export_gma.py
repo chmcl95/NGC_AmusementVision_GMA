@@ -10,6 +10,8 @@ from .gcmf import Gcmf, Attribute, \
     Submesh, Material, \
     VertexAttribute, VertexRenderFlag, DisplatListHeader, \
     DisplayList, Vertex, Strip
+from .gcmf_setting import GCMF_TextureSetting
+
 
 # Messages
 MSG_INFO_INIT = '---- {0} ----'
@@ -75,20 +77,20 @@ def generate_mipmap(ts):
 
 
 # Generate Texture
-def generate_texture(ts, idx):
+def generate_texture(gcmf_texture_property: GCMF_TextureSetting, idx: int):
     """Convert a GCMF_TextureSetting into a GCMF Texture struct."""
     print('-Texture')
     texture = Texture()
     texture.index = idx
-    texture.unk0x00 = convert_flags2value(ts.unk0x00)
-    texture.mipmap = convert_flags2value(ts.mipmap)
-    texture.uv_wrap = convert_flags2value(ts.uv_wrap)
-    texture.texture_index = ts.texture_index
-    texture.unk0x06 = ts.unk0x06
-    texture.anisotropy = convert_flags2value(ts.anisotropy)
-    texture.unk0x0C = convert_flags2value(ts.unk0x0C)
-    texture.is_swappable = convert_flags2value(ts.is_swappable)
-    texture.unk0x10 = convert_flags2value(ts.unk0x10)
+    texture.unk0x00 = convert_flags2value(gcmf_texture_property.unk0x00)
+    texture.mipmap = convert_flags2value(gcmf_texture_property.mipmap)
+    texture.uv_wrap = convert_flags2value(gcmf_texture_property.uv_wrap)
+    texture.texture_index = gcmf_texture_property.texture_index
+    texture.unk0x06 = gcmf_texture_property.unk0x06
+    texture.anisotropy = convert_flags2value(gcmf_texture_property.anisotropy)
+    texture.unk0x0C = convert_flags2value(gcmf_texture_property.unk0x0C)
+    texture.is_swappable = convert_flags2value(gcmf_texture_property.is_swappable)
+    texture.unk0x10 = convert_flags2value(gcmf_texture_property.unk0x10)
     return texture
 
 
@@ -124,7 +126,7 @@ def generate_matrix():
 # Vertex Attribute Table
 # ---------------------------------------------------------------------------
 # TODO: QUIT THIS. VAT must follwing "GCMF VAT setting" values.
-def generate_vat(bl_mat, bm):
+def generate_vat(bl_mat, bm: bmesh.types.BMesh) -> VertexAttribute:
     vat = VertexAttribute()
     
     #Position
@@ -186,12 +188,14 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx:
     vtx_render = VertexRenderFlag()
     vtx_render.dlist0_0 = True
 
-    # Well, Is it OK to give up texture index calclations?
+    gcmf_material_property = bl_mat.gcmf_material
+
+    # Well, Is this OK to give up texture index calclations?
     # if "yes" activate UNDER code.
 #    texture_indexs = [bl_mat.gcmf_material.texture_index[0], bl_mat.gcmf_material.texture_index[1], bl_mat.gcmf_material.texture_index[2]]
     texture_indexs = [-1, -1, -1]
     tex_count = 0
-    tex_slots_count = len(bl_mat.gcmf_material.gcmf_textures)
+    tex_slots_count = len(gcmf_material_property.gcmf_textures)
     if tex_slots_count > 3:
         print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_slots_count, 3))
     if tex_slots_count > 0:
@@ -200,33 +204,33 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx:
             texture_indexs[i] = tex_idx + i
         tex_count = i + 1
 
-    gcmf_material = bl_mat.material.gcmf_material
-    val = (int(gcmf_material.unk0x02[0].real) << 7)\
-        + (int(gcmf_material.unk0x02[1].real) << 6)\
-        + (int(gcmf_material.unk0x02[2].real) << 5)\
-        + (int(gcmf_material.unk0x02[3].real) << 4)\
-        + (int(gcmf_material.unk0x02[4].real) << 3)\
-        + (int(gcmf_material.unk0x02[5].real) << 2)\
-        + (int(gcmf_material.unk0x02[6].real) << 1)\
-        + int(gcmf_material.unk0x02[7].real)
+    
+    val = (int(gcmf_material_property.unk0x02[0].real) << 7)\
+        + (int(gcmf_material_property.unk0x02[1].real) << 6)\
+        + (int(gcmf_material_property.unk0x02[2].real) << 5)\
+        + (int(gcmf_material_property.unk0x02[3].real) << 4)\
+        + (int(gcmf_material_property.unk0x02[4].real) << 3)\
+        + (int(gcmf_material_property.unk0x02[5].real) << 2)\
+        + (int(gcmf_material_property.unk0x02[6].real) << 1)\
+        + int(gcmf_material_property.unk0x02[7].real)
     material.unk0x02 = val
-    val = (int(gcmf_material.unk0x03[0].real) << 7)\
-        + (int(gcmf_material.unk0x03[1].real) << 6)\
-        + (int(gcmf_material.unk0x03[2].real) << 5)\
-        + (int(gcmf_material.unk0x03[3].real) << 4)\
-        + (int(gcmf_material.unk0x03[4].real) << 3)\
-        + (int(gcmf_material.unk0x03[5].real) << 2)\
-        + (int(gcmf_material.unk0x03[6].real) << 1)\
-        + int(gcmf_material.unk0x03[7].real)
+    val = (int(gcmf_material_property.unk0x03[0].real) << 7)\
+        + (int(gcmf_material_property.unk0x03[1].real) << 6)\
+        + (int(gcmf_material_property.unk0x03[2].real) << 5)\
+        + (int(gcmf_material_property.unk0x03[3].real) << 4)\
+        + (int(gcmf_material_property.unk0x03[4].real) << 3)\
+        + (int(gcmf_material_property.unk0x03[5].real) << 2)\
+        + (int(gcmf_material_property.unk0x03[6].real) << 1)\
+        + int(gcmf_material_property.unk0x03[7].real)
     material.unk0x03 = val
-    material.color0 = gcmf_material.color0
-    material.color1 = gcmf_material.color1
-    material.color2 = gcmf_material.color2
-    material.emission = gcmf_material.emission
-    material.transparency = gcmf_material.transparency
+    material.color0 = gcmf_material_property.color0
+    material.color1 = gcmf_material_property.color1
+    material.color2 = gcmf_material_property.color2
+    material.emission = gcmf_material_property.emission
+    material.transparency = gcmf_material_property.transparency
     material.material_count = tex_count
-    material.unk0x14 = gcmf_material.unk0x14
-    material.unk0x15 = gcmf_material.unk0x15
+    material.unk0x14 = gcmf_material_property.unk0x14
+    material.unk0x15 = gcmf_material_property.unk0x15
 
     material.vtx_render = vtx_render
     material.texture_indexs = texture_indexs
@@ -239,7 +243,7 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx:
 # Vertex / Strip / DisplayList
 # ---------------------------------------------------------------------------
 
-def generate_vertex(bm_vtx, loop, bl_loops, bm: bmesh.types.BMesh, bl_tex_slots: list, obj: bpy.types.Object):
+def generate_vertex(bm_vtx: bmesh.types.BMVert, loop: bmesh.types.BMLoop, bl_loops: bpy.types.MeshLoops, bm: bmesh.types.BMesh, gcmf_texture_propertys: list[GCMF_TextureSetting], obj: bpy.types.Object) -> Vertex:
     vtx = Vertex()
     
     #Position
@@ -261,7 +265,8 @@ def generate_vertex(bm_vtx, loop, bl_loops, bm: bmesh.types.BMesh, bl_tex_slots:
                         int(clr[2] * 0xFF), int(clr[3] * 0xFF)]
 
     vtx.tex0 = [0.0, 0.0]
-    for i, ts in enumerate(bl_tex_slots):
+    #TODO: This must be controlled by "GCMF VAT" of GCMF_MaterialSetting.
+    for i, ts in enumerate(gcmf_texture_propertys):
         if i > 7:
             break
         uv_layer = bm.loops.layers.uv[0]
@@ -291,7 +296,7 @@ def generate_vertex(bm_vtx, loop, bl_loops, bm: bmesh.types.BMesh, bl_tex_slots:
     return vtx
 
 
-def generate_strip(bm, face, bl_loops, bl_tex_slots, obj, attribute):
+def generate_strip(bm: bmesh.types.BMesh, face: bmesh.types.BMFace, bl_loops: bpy.types.MeshLoops, gcmf_texture_propertys: list[GCMF_TextureSetting], obj: bpy.types.Object, attribute: Attribute) -> Strip:
     print('-Strip')
     strip = Strip()
     strip.cmd = 0x99 if attribute.is_16bit else 0x98
@@ -299,18 +304,18 @@ def generate_strip(bm, face, bl_loops, bl_tex_slots, obj, attribute):
     vtx_cnt = len(bl_loops)
     print(MSG_INFO_DATA.format('Vertex Count', vtx_cnt))
     for loop in face.loops:
-        vtx = generate_vertex(loop.vert, loop, bl_loops, bm, bl_tex_slots, obj)
+        vtx = generate_vertex(loop.vert, loop, bl_loops, bm, gcmf_texture_propertys, obj)
         vertexs.append(vtx)
     strip.vertexs = vertexs
     strip.count = len(vertexs)
     return strip
 
 
-def generate_displaylist(bm: bmesh.types.BMesh, mat_idx: int, bl_loops: list, bl_tex_slots: list, obj: bpy.types.Object, attribute: Attribute) -> DisplayList:
+def generate_displaylist(bm: bmesh.types.BMesh, mat_idx: int, bl_loops: bpy.types.MeshLoops, gcmf_texture_propertys: list[GCMF_TextureSetting], obj: bpy.types.Object, attribute: Attribute) -> DisplayList:
     dlist = DisplayList()
     for face in bm.faces:
         if face.material_index == mat_idx:
-            strip = generate_strip(bm, face, bl_loops, bl_tex_slots, obj, attribute)
+            strip = generate_strip(bm, face, bl_loops, gcmf_texture_propertys, obj, attribute)
             dlist.strips.append(strip)
     return dlist
 
@@ -324,7 +329,7 @@ def generate_displaylistheader():
     return dlist_header
 
 
-def generate_submesh(attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl_mat: bpy.types.Material, tex_idx: int, mat_idx: int, bl_loops: list) -> Submesh:
+def generate_submesh(attribute: Attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl_mat: bpy.types.Material, tex_idx: int, mat_idx: int, bl_loops: bpy.types.MeshLoops) -> Submesh:
     print('-Submesh')
     submesh = Submesh()
 
@@ -332,11 +337,11 @@ def generate_submesh(attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl
     submesh.dlist_headers = [dlist_header]
 
     submesh.material = generate_matrial(bm, bl_mat, tex_idx)
-    submesh.boundingsphere_origin = bl_mat.material.gcmf_material.boundingsphere_origin
-    submesh.unk0x3C = bl_mat.material.gcmf_material.unk0x3C
+    submesh.boundingsphere_origin = bl_mat.gcmf_material.boundingsphere_origin
+    submesh.unk0x3C = bl_mat.gcmf_material.unk0x3C
     val = 0x00
-    max_bit = len(bl_mat.material.gcmf_material.unk0x40) - 1
-    for i, b in enumerate(bl_mat.material.gcmf_material.unk0x40):
+    max_bit = len(bl_mat.gcmf_material.unk0x40) - 1
+    for i, b in enumerate(bl_mat.gcmf_material.unk0x40):
         val += (int(b) << (max_bit - i))
     submesh.unk0x40 = val
 
@@ -376,31 +381,31 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
 
     opaque_count = 0
     transparent_count = 0
+    curr_idx = 0
 
     img_names = [img.name for img in bpy.data.images]
 
-    for bl_mat in bpy.data.objects[obj.name].material_slots:
-        mat = bl_mat.material
-        if mat is None:
+    for bl_mat_slot in bpy.data.objects[obj.name].material_slots:
+        bl_mat = bl_mat_slot.material
+        if bl_mat is None:
             continue
-        # Transparency: check blend_method (4.x) or alpha < 1 in BSDF
-        is_transparent = False
-        # TODO: QUIT THIS. "Transparency Count" on Object.
-        if hasattr(mat, 'blend_method') and mat.blend_method in ('BLEND', 'HASHED', 'CLIP'):
-            is_transparent = True
-        elif mat.gcmf_material.transparency < 0xFF:
-            is_transparent = True
-        if is_transparent:
-            transparent_count += 1
+#        # Transparency: check blend_method (4.x) or alpha < 1 in BSDF
+#        is_transparent = False
+#        # TODO: QUIT THIS. "Transparency Count" on Object.
+#        if hasattr(mat, 'blend_method') and mat.blend_method in ('BLEND', 'HASHED', 'CLIP'):
+#            is_transparent = True
+#        elif mat.gcmf_material.transparency < 0xFF:
+#            is_transparent = True
+#        if is_transparent:
+#            transparent_count += 1
 
-#        ts_list = _get_gcmf_textures_for_material(mat)
-#        for i, ts in enumerate(ts_list):
+#        for i, gcmf_texture in enumerate(bl_mat.gcmf_material.gcmf_textures):
 #            if i > 2:
 #                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
 #                break
-#            curr_idx = len(gcmf.textures)
-#            texture = generate_texture(ts, curr_idx)
+#            texture = generate_texture(gcmf_texture, curr_idx)
 #            gcmf.textures.append(texture)
+#            curr_idx += 1
 
     print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
     opaque_count = len(obj.material_slots) - transparent_count
@@ -431,8 +436,8 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     bl_loops = bl_mesh.loops
 
     tex_idx = 0
-    for mat_idx, bl_mat in enumerate(obj.material_slots):
-        submesh = generate_submesh(gcmf.attribute, bm, obj, bl_mat, tex_idx, mat_idx, bl_loops)
+    for mat_idx, mat_slot in enumerate(obj.material_slots):
+        submesh = generate_submesh(gcmf.attribute, bm, obj, mat_slot.material, tex_idx, mat_idx, bl_loops)
         gcmf.submeshs.append(submesh)
         tex_idx = tex_idx + submesh.material.material_count
 
