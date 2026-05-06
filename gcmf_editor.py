@@ -39,33 +39,47 @@ MSG_LABEL_EDIT = '{0}:'
 
 def draw_checkbox_row(box: bpy.types.UILayout, data: bpy.types.AnyType, show_property: bool, property :str, label_texts: list[str], data_masks: list[bool], label_text: str):
     """Convert a list of boolean flags to a column of checkboxes with labels."""
-    box.prop(data, "show_" + property, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
+    box.prop(data, text=label_text, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
     if show_property:
         _checkbox = box.box()
-        for i, label_text in enumerate(label_texts):
+        for i, _label_text in enumerate(label_texts):
             if not data_masks[i]:
                 continue
             row = _checkbox.row()
-            row.prop(data, property, index=i, text=label_text)
+            row.prop(data, property, index=i, text=_label_text)
 
 def draw_checkbox_column(box: bpy.types.UILayout, data: bpy.types.AnyType, show_property: bool, flags: list[bool], property :str, label_text: str):
     box.prop(data, "show_" + property, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
     if show_property:
         _checkbox = box.box()
         length=len(flags)
-        _checkbox.column_flow(columns=length)
+        col = _checkbox.column_flow(columns=length)
         for i in range(length):
-            _checkbox.prop(data, property, index=i, text='')
+            col.prop(data, property, index=i, text='')
 
-#def draw_checkbox_column2(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], flags: list[bool], property :str, label_text: str):
-#    show_property = show_propertys[property]
-#    box.prop(data, "show_" + property, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
-#    if show_property:
-#        _checkbox = box.box()
-#        length=len(flags)
-#        _checkbox.column_flow(columns=length)
-#        for i in range(length):
-#            _checkbox.prop(data, property, index=i, text='')
+def draw_checkbox_rows2(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], show_property_keys: list[str], label_texts: list[str], data_masks: list[bool], property :str, label_text: str):
+    """Convert a list of boolean flags to a column of checkboxes with labels."""
+    idx = show_property_keys.index(property)
+    show_property = show_propertys[idx]
+    box.prop(data, 'show_propertys', index=idx, text=label_text, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
+    if show_property:
+        _checkbox = box.box()
+        for i, _label_text in enumerate(label_texts):
+            if not data_masks[i]:
+                continue
+            row = _checkbox.row()
+            row.prop(data, property, index=i, text=_label_text)
+
+def draw_checkbox_column2(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], show_property_keys: list[str], flags: list[bool], property :str, label_text: str):
+    idx = show_property_keys.index(property)
+    show_property = show_propertys[idx]
+    box.prop(data, 'show_propertys', index=idx, text=label_text, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
+    if show_property:
+        _checkbox = box.box()
+        length=len(flags)
+        col = _checkbox.column_flow(columns=length)
+        for i in range(length):
+            col.prop(data, property, index=i, text='')
 
 # GCMF Object Setting Show Panel
 class OBJECT_PT_GCMF_Object_Viewer(bpy.types.Panel):
@@ -194,6 +208,9 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
     def draw(self, context):
         try:
             gcmf_material = bpy.context.active_object.active_material.gcmf_material
+            show_property_keys = [
+                'unk0x40', 'vertex_descriptor'
+            ]
 
             self.layout.label(text=MSG_LABEL_EDIT.format('unk0x02'))
             self.layout.prop(gcmf_material, "unk0x02", text="values")
@@ -227,7 +244,7 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
             vtx_descriptor_mask[20] = True
 #            vtx_descriptor_mask[21] = True
 #            vtx_descriptor_mask[22] = True
-            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_vertex_descriptor, 'vertex_descriptor', vtx_descriptor_label, vtx_descriptor_mask, 'vertex_descriptor')
+            draw_checkbox_rows2(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, vtx_descriptor_label, vtx_descriptor_mask, 'vertex_descriptor', 'Vertex Descriptor')
             self.layout.label(text=MSG_LABEL_EDIT.format('Texture Indexes'))
             self.layout.prop(gcmf_material, "texture_indexes", text="values")
             
@@ -236,7 +253,7 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
             self.layout.label(text=MSG_LABEL_EDIT.format(NAME_GXMDLVIEW_MAT_BOUND_SPHERE))
             self.layout.prop(gcmf_material, "boundingsphere_origin", text="values")
             self.layout.prop(gcmf_material, "unk0x3C", text="unk0x3C")
-            draw_checkbox_column(self.layout, gcmf_material, gcmf_material.show_unk0x40, gcmf_material.unk0x40, 'unk0x40', 'unk0x40')
+            draw_checkbox_column2(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, gcmf_material.unk0x40, 'unk0x40', 'unk0x40')
         except Exception as e:
             self.layout.label(text=f"Error occurred: {e}")
 

@@ -102,12 +102,12 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
                                            default=tuple(_unk0x40_default),
                                            subtype='NONE', size=32)
 
-    show_unk0x40: bpy.props.BoolProperty(name="unk0x40", default=False)
-    show_vertex_descriptor: bpy.props.BoolProperty(name="Vertex Descriptor", default=False)
-    show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *2,
-                                           subtype='NONE', size=2)
-
+    # sub property
     gcmf_textures: bpy.props.CollectionProperty(type=GCMF_TextureSetting)
     
+    # UI
+    show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *2,
+                                           subtype='NONE', size=2)
+    # sub box
     show_gcmf_textures: bpy.props.BoolVectorProperty(name="Textures", default=(False,)*3)
     show_gcmf_textures_edit: bpy.props.BoolVectorProperty(name="Textures Edit", default=(False,)*3)
