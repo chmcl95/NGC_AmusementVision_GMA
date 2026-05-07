@@ -11,7 +11,7 @@ from . import gcmf_setting
 bl_info = {
     "name": "Amusement Vision GMA format",
     "author": "CH-MCL",
-    "version": (0, 4, 420, 0),
+    "version": (0, 5, 420, 0),
     "blender": (4, 2, 0),
     "location": "File > Import-Export > Amusement Vision Model (.gma)",
     "description": "Imports a Amusement Vision 3d model.",

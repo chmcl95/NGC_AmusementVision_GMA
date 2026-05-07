@@ -35,7 +35,7 @@ class GCMF_TextureSetting(bpy.types.PropertyGroup):
     uv_wrap: bpy.props.BoolVectorProperty(name="uv_wrap",
                                            default=tuple(_uv_wrap_default),
                                            subtype='NONE', size=8)
-    texture_index: bpy.props.IntProperty(name="texture_index", default=0x00, min=-0x7FFF, max=0x7FFF)
+    texture_index: bpy.props.IntProperty(name="texture_index", default=0x00, min=-1, max=0x7FFF)
     unk0x06: bpy.props.IntProperty(name="unk0x06", default=0x00, min=0x00, max=0xFF)
     anisotropy: bpy.props.BoolVectorProperty(name="anisotropy",
                                               default=(False,) * 8,
@@ -54,14 +54,9 @@ class GCMF_TextureSetting(bpy.types.PropertyGroup):
                                            subtype='NONE', size=32)
     
     order_index = bpy.props.IntProperty(name="gcmf texture order index", default=0x00, min=-0x7FFF, max=0x7FFF)
-
-    show_unk0x00: bpy.props.BoolProperty(name="unk0x00", default=False)
-    show_mipmap: bpy.props.BoolProperty(name="MIPMAP", default=False)
-    show_uv_wrap: bpy.props.BoolProperty(name="UV WRAP", default=False)
-    show_anisotropy: bpy.props.BoolProperty(name="Anisotropy", default=False)
-    show_unk0x0C: bpy.props.BoolProperty(name="unk0x0C", default=False)
-    show_is_swappable: bpy.props.BoolProperty(name="is_swappable", default=False)
-    show_unk0x10: bpy.props.BoolProperty(name="unk0x10", default=False)
+    # UI
+    show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *7,
+                                           subtype='NONE', size=7)
 
 
 # GCMF Material Property
@@ -106,8 +101,8 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
     gcmf_textures: bpy.props.CollectionProperty(type=GCMF_TextureSetting)
     
     # UI
-    show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *2,
-                                           subtype='NONE', size=2)
+    show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *4,
+                                           subtype='NONE', size=4)
     # sub box
     show_gcmf_textures: bpy.props.BoolVectorProperty(name="Textures", default=(False,)*3)
     show_gcmf_textures_edit: bpy.props.BoolVectorProperty(name="Textures Edit", default=(False,)*3)
