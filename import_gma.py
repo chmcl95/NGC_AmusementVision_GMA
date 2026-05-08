@@ -63,13 +63,13 @@ def _get_or_create_image(images: bpy.types.BlendDataImages, name: str):
 # Generate Blender's Material
 # ---------------------------------------------------------------------------
 
-def generate_material(material: Material, matid: int, gcmf_texs_data: list, images, is_alpha: bool):
+def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list, images, is_alpha: bool):
     """
     Create a Blender material and populate gcmf_material custom properties.
     Textures are stored in gcmf_material.gcmf_textures collection; images are
     wired into a Principled BSDF node tree for basic viewport preview.
     """
-    mat = bpy.data.materials.new(name=NAME_MATERIAL.format(matid))
+    mat = bpy.data.materials.new(name=NAME_MATERIAL.format(mat_idx))
     mat.use_nodes = True
 
     # ---- Store original GCMF values ----
@@ -85,6 +85,7 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
     gcmf_material.unk0x15 = material.unk0x15
     gcmf_material.texture_indexes = material.texture_indexs
     gcmf_material.vtx_descriptor = convert_value2flags(material.vtx_descriptor.pack(), gcmf_material.vtx_descriptor)
+    gcmf_material.order_index = mat_idx
 
     # ---- Basic node setup ----
     nodes = mat.node_tree.nodes
@@ -127,6 +128,7 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
             ts.unk0x0C = convert_value2flags(raw_tex.unk0x0C, ts.unk0x0C)
             ts.is_swappable = convert_value2flags(raw_tex.is_swappable, ts.is_swappable)
             ts.unk0x10 = convert_value2flags(raw_tex.unk0x10, ts.unk0x10)
+            ts.order_index = texid
 
             # Image name
             img_id = raw_tex.texture_index

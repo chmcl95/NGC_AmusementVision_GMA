@@ -53,7 +53,7 @@ class GCMF_TextureSetting(bpy.types.PropertyGroup):
                                            default=tuple(_unk0x10_default),
                                            subtype='NONE', size=32)
     
-    order_index = bpy.props.IntProperty(name="gcmf texture order index", default=0x00, min=-0x7FFF, max=0x7FFF)
+    order_index: bpy.props.IntProperty(name="gcmf texture order index", default=0x00, min=-0x7FFF, max=0x7FFF)
     # UI
     show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=[False,] *7,
                                            subtype='NONE', size=7)
@@ -83,7 +83,7 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
                                                     subtype='NONE', size=32)
     texture_indexes: bpy.props.IntVectorProperty(name="texture_indices", default=(-1, -1, -1),
                                                  min=-1, max=0x7F, subtype='NONE', size=3)
-    order_index = bpy.props.IntProperty(name="gcmf material order index", default=0x00, min=-0x7FFF, max=0x7FFF)
+    order_index: bpy.props.IntProperty(name="gcmf material order index", default=0x00, min=-0x7FFF, max=0x7FFF)
 
 
     # These are not strictly Material properties but are kept here for round-trip

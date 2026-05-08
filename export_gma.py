@@ -36,9 +36,9 @@ def convert_flags2value(src_flags):
 # ---------------------------------------------------------------------------
 def generate_texture(gcmf_texture_property: GCMF_TextureSetting, idx: int):
     """Convert a GCMF_TextureSetting into a GCMF Texture struct."""
-    print('-Texture')
+#    print('-Texture')
     texture = Texture()
-    texture.index = idx
+    texture.index = idx if gcmf_texture_property.order_index < 0 else gcmf_texture_property.order_index
     texture.unk0x00 = convert_flags2value(gcmf_texture_property.unk0x00)
     texture.mipmap = convert_flags2value(gcmf_texture_property.mipmap)
     texture.uv_wrap = convert_flags2value(gcmf_texture_property.uv_wrap)
@@ -86,48 +86,10 @@ def generate_matrix():
 def generate_vat(bl_mat, bm: bmesh.types.BMesh) -> VertexAttribute:
     vat = VertexAttribute()
     
-    #Position
-    vat.gx_va_pos = True
-    #Normal
-    vat.gx_va_nrm = True
-    
-    #Color
-    clr_count = len(bm.loops.layers.color)
-#    if bl_mat.material.use_vertex_color_paint == True:
-#        #Enable Vertex-Color
-#        if clr_count != 0:
-#            if clr_count > 0:
-#                vat.gx_va_clr0 = True
-#            if clr_count > 1:
-#                print(MSG_WARN_MANY.format(1, 'VERTEX-COLOR', clr_count))
-#                vat.gx_va_clr1 = True
-#            if clr_count > 2:
-#                 print(MSG_WARN_TOO_MANY.format('VERTEX-COLOR', clr_count, 2))
-    #TEX0~7
-#    vat.gx_va_tex0 = True # force export UV0
-#    tex_slot = list(filter(None, bl_mat.material.texture_slots)) # removes None
-#    uv_count = len(tex_slot)
-#    if uv_count == 0:
-#        #UV is not exsit
-#        print(MSG_WARN_NONE_UV)
-#    else:
-#        if uv_count > 1:
-#            vat.gx_va_tex1 = True
-#        if uv_count > 2:
-#            vat.gx_va_tex2 = True
-#        if uv_count > 3:
-#            print(MSG_WARN_MANY.format(3, 'UV', uv_count))
-#            vat.gx_va_tex3 = True
-#        if uv_count > 4:
-#            vat.gx_va_tex4 = True
-#        if uv_count > 5:
-#            vat.gx_va_tex5 = True
-#        if uv_count > 6:
-#            vat.gx_va_tex6 = True
-#        if uv_count > 7:
-#            vat.gx_va_tex7 = True
-#        if uv_count > 8:
-#            print(MSG_WARN_TOO_MANY.format('UV', uv_count, 7))
+    val = 0x00
+    for i, _unk0x02 in enumerate(bl_mat.gcmf_material.vtx_descriptor):
+        val += (int(_unk0x02) << (31 - i))
+    vat.unpack(val)
 
     return vat
 
@@ -137,7 +99,7 @@ def generate_vat(bl_mat, bm: bmesh.types.BMesh) -> VertexAttribute:
 # ---------------------------------------------------------------------------
 
 def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material, tex_idx: int) -> Material:
-    print('-Material')
+#    print('-Material')
     material = Material()
 
     vtx_attr = generate_vat(bl_mat, bm)
@@ -250,12 +212,12 @@ def generate_vertex(bm_vtx: bmesh.types.BMVert, loop: bmesh.types.BMLoop, bl_loo
 
 
 def generate_strip(bm: bmesh.types.BMesh, face: bmesh.types.BMFace, bl_loops: bpy.types.MeshLoops, gcmf_texture_propertys: list[GCMF_TextureSetting], obj: bpy.types.Object, attribute: Attribute) -> Strip:
-    print('-Strip')
+#    print('-Strip')
     strip = Strip()
     strip.cmd = 0x99 if attribute.is_16bit else 0x98
     vertexs = []
     vtx_cnt = len(bl_loops)
-    print(MSG_INFO_DATA.format('Vertex Count', vtx_cnt))
+#    print(MSG_INFO_DATA.format('Vertex Count', vtx_cnt))
     for loop in face.loops:
         vtx = generate_vertex(loop.vert, loop, bl_loops, bm, gcmf_texture_propertys, obj)
         vertexs.append(vtx)
@@ -283,7 +245,7 @@ def generate_displaylistheader():
 
 
 def generate_submesh(attribute: Attribute, bm: bmesh.types.BMesh, obj: bpy.types.Object, bl_mat: bpy.types.Material, tex_idx: int, mat_idx: int, bl_loops: bpy.types.MeshLoops) -> Submesh:
-    print('-Submesh')
+#    print('-Submesh')
     submesh = Submesh()
 
     dlist_header = generate_displaylistheader()
@@ -332,36 +294,26 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     gcmf.origin = [obj.location[0], obj.location[1], obj.location[2]]
     gcmf.boundspher_radius = max(obj.dimensions)
 
-    opaque_count = 0
-    transparent_count = 0
     curr_idx = 0
 
     img_names = [img.name for img in bpy.data.images]
 
+    gcmf_textures = []
     for bl_mat_slot in bpy.data.objects[obj.name].material_slots:
         bl_mat = bl_mat_slot.material
         if bl_mat is None:
             continue
-#        # Transparency: check blend_method (4.x) or alpha < 1 in BSDF
-#        is_transparent = False
-#        # TODO: QUIT THIS. "Transparency Count" on Object.
-#        if hasattr(mat, 'blend_method') and mat.blend_method in ('BLEND', 'HASHED', 'CLIP'):
-#            is_transparent = True
-#        elif mat.gcmf_material.transparency < 0xFF:
-#            is_transparent = True
-#        if is_transparent:
-#            transparent_count += 1
 
-#        for i, gcmf_texture in enumerate(bl_mat.gcmf_material.gcmf_textures):
-#            if i > 2:
-#                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
-#                break
-#            texture = generate_texture(gcmf_texture, curr_idx)
-#            gcmf.textures.append(texture)
-#            curr_idx += 1
+        for i, gcmf_texture in enumerate(bl_mat.gcmf_material.gcmf_textures):
+            if i > 2:
+                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
+                break
+            texture = generate_texture(gcmf_texture, curr_idx)
+            gcmf_textures.append(texture)
+            curr_idx += 1
 
-    print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
-    opaque_count = len(obj.material_slots) - transparent_count
+    sorted_textures = sorted(gcmf_textures, key=lambda t: t.index)
+    gcmf.textures = sorted_textures
 
     # Submesh
     bm = bmesh.new()
@@ -406,9 +358,10 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     obj_eval.to_mesh_clear()
     del bm
 
+    print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
     gcmf.texture_count = len(gcmf.textures)
-    gcmf.opaque_count = opaque_count
-    gcmf.transparent_count = transparent_count
+    gcmf.transparent_count = obj.gcmf_object.transparent_material_count
+    gcmf.opaque_count = len(gcmf.submeshs) - obj.gcmf_object.transparent_material_count
 
     return gcmf
 
