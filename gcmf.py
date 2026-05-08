@@ -146,7 +146,7 @@ class VertexControll:
     
     def unpack(self, file, endian):
         self.base_offs = file.tell()
-        print(MSG_INFO_DATA_HEX.format('VertexControll Offset', self.base_offs))
+#        print(MSG_INFO_DATA_HEX.format('VertexControll Offset', self.base_offs))
         
         bytes = file.read(struct.calcsize(self.fmt))
         buff = struct.unpack_from(endian + self.fmt, bytes, 0)
@@ -156,8 +156,8 @@ class VertexControll:
         self.offset_2 = buff[2]
         self.offset_3 = buff[3]
         self.offset_4 = buff[4]
-        print('VertexControll Offset 2: {0:#X} | ABS: {1:#X}'.format(self.offset_2, self.offset_2 + self.base_offs))
-        print('VertexControll Offset 3: {0:#X} | ABS: {1:#X}'.format(self.offset_3, self.offset_3 + self.base_offs))
+#        print('VertexControll Offset 2: {0:#X} | ABS: {1:#X}'.format(self.offset_2, self.offset_2 + self.base_offs))
+#        print('VertexControll Offset 3: {0:#X} | ABS: {1:#X}'.format(self.offset_3, self.offset_3 + self.base_offs))
 
 
 #Vertex Render Flag
@@ -406,7 +406,7 @@ class Material:
 
     def pack(self, file, endian):
         vat = self.vtx_descriptor.pack()
-        print( MSG_INFO_DATA_HEX.format('VAT', vat) )
+#        print( MSG_INFO_DATA_HEX.format('VAT', vat) )
         buff = struct.pack(endian + self.fmt, \
                     0, \
                     self.unk0x02, self.unk0x03, \
@@ -597,7 +597,7 @@ class Vertex:
         return val
     
     def unpack(self, file, endian, attribute, vertex_attribute, base_offs = 0x00):
-        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
         if (attribute.is_skin or attribute.is_effective):
 
             self.pos = self.unpack_vec3(file, endian, attribute.is_16bit)
@@ -640,7 +640,7 @@ class Vertex:
             if vertex_attribute.gx_va_nrm == True:
                 self.nrm = self.unpack_vec3(file, endian, attribute.is_16bit)
             if vertex_attribute.gx_va_nbt == True:
-                print('nbt :  {0:#X}'.format(file.tell()))
+#                print('nbt :  {0:#X}'.format(file.tell()))
                 fmt = (self.fmt_vtx_16 if attribute.is_16bit else self.fmt_vtx).format(9)
                 bytes = file.read(struct.calcsize(fmt))
                 buff = struct.unpack_from(endian + fmt, bytes, 0)
@@ -677,7 +677,7 @@ class Vertex:
                 self.light = self.unpack_vec3(file, endian, attribute.is_16bit)
 
     def pack(self, file, endian, attribute, vertex_attribute):
-        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
         if (attribute.is_skin or attribute.is_effective):
             #skin, effective
             buff = struct.pack(endian + self.fmt_skin, \
@@ -815,7 +815,7 @@ class DisplayList:
         self.strips = []
     
     def unpack(self, file, endian, attribute, vtx_attribute, dlist_end_offs, vertex_controll):
-        print( MSG_INFO_DATA_HEX.format('DisplayList End Addres: {0:#X}', dlist_end_offs) )
+#        print( MSG_INFO_DATA_HEX.format('DisplayList End Addres: {0:#X}', dlist_end_offs) )
         
         #seek 1byte for 16bit, stiching
         file.seek(file.tell() + 0x01)
@@ -888,7 +888,7 @@ class Submesh:
         self.dlists = []
     
     def unpack(self, file, endian, attribute, vertex_controll, vtxcon_offs3):
-        print( MSG_INFO_DATA_HEX.format('Submesh Offset', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Submesh Offset', file.tell()) )
         self.material.unpack(file, endian)
         
         dlist_header = DisplatListHeader()
@@ -910,13 +910,13 @@ class Submesh:
         #ExtraDisplayListHeader
         if(vtx_render.dlist1_0 or vtx_render.dlist1_1):
             #dlist_1_0 or dlist_1_1 Exist
-            print('Detect ExtraDisplayList')
+#            print('Detect ExtraDisplayList')
             offs = 0x00
             for dlist_size in self.dlist_headers[0].dlist_sizes:
                 offs = offs + dlist_size
             #Seek to ExtraDisplayListHeader
             file.seek(file.tell() + offs)
-            print( MSG_INFO_DATA_HEX.format('Seek(Extra DisplayList Load)', file.tell()) )
+#            print( MSG_INFO_DATA_HEX.format('Seek(Extra DisplayList Load)', file.tell()) )
             #Store submesh offset
             dlist_header = DisplatListHeader()
             dlist_header.unpack(file, endian)
@@ -932,24 +932,24 @@ class Submesh:
             if (attribute.is_skin or attribute.is_effective):
                 #skin, effective
                 dlist_offs = vertex_controll.base_offs + vtxcon_offs3
-                print( MSG_INFO_DATA_HEX.format('Submesh VertexControll Offset 3', dlist_offs) )
+#                print( MSG_INFO_DATA_HEX.format('Submesh VertexControll Offset 3', dlist_offs) )
             else:
                 #16bit, stiching
                 dlist_offs = dlist_header.submesh_end_offs
             dlist_end_offs = dlist_offs
-            print( MSG_INFO_DATA_HEX.format('Submesh End Offset', dlist_end_offs) )
+#            print( MSG_INFO_DATA_HEX.format('Submesh End Offset', dlist_end_offs) )
             #seek to VertexControll's offset 3 or Submesh End Offset
             file.seek(dlist_offs)
             for i, dlist_size in enumerate(dlist_header.dlist_sizes):
                 if (attribute.is_skin or attribute.is_effective):
                     #skin, effective
                     #needs to dlist_size * 0x04
-                    print('DisplayList{0} Length: {1:#X}'.format(i, dlist_size))
-                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size * 0x04))
+#                    print('DisplayList{0} Length: {1:#X}'.format(i, dlist_size))
+#                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size * 0x04))
                     dlist_end_offs = dlist_end_offs + (dlist_size * 0x04)
                 else:
                     #default, 16bit, stiching
-                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size))
+#                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size))
                     dlist_end_offs = dlist_end_offs + dlist_size
                 #read displaylist
                 if file.tell() <= dlist_end_offs:
@@ -1094,7 +1094,7 @@ class Gcmf():
     #Pack
     def pack(self, file, endian):
         print('----Pack----')
-        print( MSG_INFO_DATA_HEX.format('GCMF Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('GCMF Address', file.tell()) )
         # skip Gcmf Header
         gcmf_offset = file.tell()
         file.seek(gcmf_offset + struct.calcsize(self.fmt))

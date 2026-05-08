@@ -83,6 +83,8 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
     gcmf_material.transparency = material.transparency
     gcmf_material.unk0x14 = material.unk0x14
     gcmf_material.unk0x15 = material.unk0x15
+    gcmf_material.texture_indexes = material.texture_indexs
+    gcmf_material.vtx_descriptor = convert_value2flags(material.vtx_descriptor.pack(), gcmf_material.vtx_descriptor)
 
     # ---- Basic node setup ----
     nodes = mat.node_tree.nodes
@@ -125,18 +127,6 @@ def generate_material(material: Material, matid: int, gcmf_texs_data: list, imag
             ts.unk0x0C = convert_value2flags(raw_tex.unk0x0C, ts.unk0x0C)
             ts.is_swappable = convert_value2flags(raw_tex.is_swappable, ts.is_swappable)
             ts.unk0x10 = convert_value2flags(raw_tex.unk0x10, ts.unk0x10)
-
-            # UV wrap convenience cache
-            uv = ts.uv_wrap
-            if uv[Texture_Wrap.MIRROR_X]:
-                ts.use_mirror_x = True
-            if uv[Texture_Wrap.MIRROR_Y]:
-                ts.use_mirror_y = True
-            if (uv[Texture_Wrap.REPEAT_X] or uv[Texture_Wrap.REPEAT_Y] or
-                    uv[Texture_Wrap.MIRROR_X] or uv[Texture_Wrap.MIRROR_Y]):
-                ts.extension = 'REPEAT'
-            else:
-                ts.extension = 'EXTEND'
 
             # Image name
             img_id = raw_tex.texture_index
@@ -194,13 +184,15 @@ def generate_mesh(mesh: bpy.types.Mesh, bm: bmesh.types.BMesh, matid: int, mesh_
             pnmtxidx = vertex.pnmtxidx
             if pnmtxidx >= 0:
                 if (pnmtxidx > 0x18) or ((pnmtxidx % 3) != 0):
-                    print(MSG_INFO_DATA.format('pnmtxidx', pnmtxidx))
+#                    print(MSG_INFO_DATA.format('pnmtxidx', pnmtxidx))
+                    pass
                 else:
                     ridx = int((pnmtxidx / 3) - 1)
-                    print(ridx)
+#                    print(ridx)
                     idx = mtxidxs[ridx]
                     if idx < 0:
-                        print(MSG_INFO_DATA.format('matrix_index', idx))
+#                        print(MSG_INFO_DATA.format('matrix_index', idx))
+                        pass
                     else:
                         mtx = mtxs[idx].mtx
                         vtx = mtx @ vtx  # '@' replaces '*' for matrix-vector in 2.80+
@@ -273,8 +265,8 @@ def load(filepath: str, little_endian=False):
         entrys = gma.entrys
 
         for i, entry in enumerate(entrys):
-            print(MSG_INFO_INIT.format('Generate Blender Mesh'))
-            print(MSG_INFO_DATA.format('Mesh Name', entry.name))
+#            print(MSG_INFO_INIT.format('Generate Blender Mesh'))
+#            print(MSG_INFO_DATA.format('Mesh Name', entry.name))
             mesh_name = NAME_POLYGON.format(i)
             mesh = bpy.data.meshes.new(mesh_name)
             obj = bpy.data.objects.new(entry.name, mesh)
@@ -291,20 +283,21 @@ def load(filepath: str, little_endian=False):
 
             obj.gcmf_object.index = i
             obj.gcmf_object.attribute = generate_attribute(gcmf.attribute)
+            obj.gcmf_object.transparent_material_count = gcmf.transparent_count
 
             flags = numpy.array(0x00, dtype='i4')
             total_flags = numpy.array(0x00, dtype='i4')
 
             # Texture
-            print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
+#            print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
             # Keep raw GCMF texture structs for property population
             gcmf_texs_data = gcmf.textures
 
             mtxidxs = gcmf.mtx_idxs
             mtxs = gcmf.mtxs
 
-            print(MSG_INFO_DATA.format('Submesh Count', len(gcmf.submeshs)))
-            for matid, submesh in enumerate(gcmf.submeshs):
+#            print(MSG_INFO_DATA.format('Submesh Count', len(gcmf.submeshs)))
+            for mat_idx, submesh in enumerate(gcmf.submeshs):
                 #Vertex Attribute
                 attribute = submesh.material.vtx_descriptor
                 flags = attribute.pack()
@@ -314,7 +307,7 @@ def load(filepath: str, little_endian=False):
                     is_cw = (j % 2 == 1)
                     # even : ccw
                     # odd  : cw
-                    generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, is_cw)
+                    generate_mesh(mesh, bm, mat_idx, mesh_data, dlist, mtxidxs, mtxs, is_cw)
 
             #Generate Vertex_Attribute from all submeshs's vertex_attribute
             all_attribute = VertexAttribute()
@@ -356,10 +349,10 @@ def load(filepath: str, little_endian=False):
 
             # Material
             texid_offset = 0
-            for matid, submesh in enumerate(gcmf.submeshs):
+            for mat_idx, submesh in enumerate(gcmf.submeshs):
                 material = submesh.material
-                is_alpha = matid >= gcmf.opaque_count
-                mat = generate_material(material, matid, gcmf_texs_data, images, is_alpha)
+                is_alpha = mat_idx >= gcmf.opaque_count
+                mat = generate_material(material, mat_idx, gcmf_texs_data, images, is_alpha)
                 mat.gcmf_material.unk0x3C = submesh.unk0x3C
                 mat.gcmf_material.unk0x40 = convert_value2flags(
                     submesh.unk0x40, mat.gcmf_material.unk0x40)

@@ -82,7 +82,7 @@ class Gma:
         buff = struct.unpack_from(endian + self.fmt, bytes, 0)
         
         self.count = buff[0]
-        print(MSG_INFO_DATA.format('GCMF Count', self.count))
+#        print(MSG_INFO_DATA.format('GCMF Count', self.count))
         self.base_gcmf = buff[1]
         
         #get entry_offset
@@ -107,7 +107,7 @@ class Gma:
         #skip Header(8), and Gcmf Entry(count * 8)
         self.base_name = struct.calcsize(self.fmt) + (self.count * 0x08)
         file.seek(self.base_name)
-        print( MSG_INFO_DATA_HEX.format('gcmf_name_offset', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('gcmf_name_offset', file.tell()) )
         str_len = 0x00
         #Object Names
         for entry in self.entrys:
@@ -139,7 +139,7 @@ class Gma:
 
         #GCMF Entry Offset
         file.seek(0x08)
-        print( MSG_INFO_DATA_HEX.format('entry offset', len(self.entry_offsets)) )
+#        print( MSG_INFO_DATA_HEX.format('entry offset', len(self.entry_offsets)) )
         for entry_offset in self.entry_offsets:
             entry_offset.pack(file, endian)
         

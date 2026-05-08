@@ -23,7 +23,7 @@ NAME_GXMDLVIEW_OBJ_BOUND_SPHERE = 'Bounding Spher Center (X, Y, Z)'
 NAME_GXMDLVIEW_OBJ_UNK3C = 'Unknown (0x3C)'
 NAME_GXMDLVIEW_OBJ_UNK40 = 'Unknown (0x40)'
 NAME_GXMDLVIEW_TEX_MAT_FLAG = 'Material Flags (0x00)'
-NAME_GXMDLVIEW_TEX_TPL_IDX = 'Texture Index (0x04)'
+NAME_GXMDLVIEW_TEX_TPL_IDX = 'TPL / Texture Index (0x04)'
 NAME_GXMDLVIEW_TEX_UNK06 = 'Unknown (0x06)'
 NAME_GXMDLVIEW_TEX_ANISO = 'Anisotropy Level (0x07)'
 NAME_GXMDLVIEW_TEX_UNK0C = 'Unknown (0x0C)'
@@ -110,7 +110,7 @@ class OBJECT_PT_GCMF_Object_Editor(bpy.types.Panel):
             #         'is_16bit']
             # for text in texts:
             #    col_attribute.label(text)
-            self.layout.prop(gcmf_object, "transparent_materil_count", text="Transparent Material Count")
+            self.layout.prop(gcmf_object, "transparent_material_count", text="Transparent Material Count")
 
         # If faild to get "gcmf_object" from active Object
         except Exception as e:
@@ -135,7 +135,9 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
     def draw(self, context):
         try:
             gcmf_material = bpy.context.active_object.active_material.gcmf_material
-
+            show_property_keys = [
+                'vtx_descriptor', 'unk0x02', 'unk0x03','unk0x40'
+            ]
             # unk0x02, unk0x03
             val = 0x00
             for i, _unk0x02 in enumerate(gcmf_material.unk0x02):
@@ -163,6 +165,26 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             for i, texture_idx_label in enumerate(NAME_GXMDLVIEW_MAT_TEXTURE_INDEXS):
                 _texture_idx_text = '{}: None'.format(texture_idx_label) if gcmf_material.texture_indexes[i] < 0 else MSG_HEX_NOALIGN.format(texture_idx_label, gcmf_material.texture_indexes[i])
                 self.layout.label(text=_texture_idx_text)
+            # Vertex Descriptor (Actual this is Edit. But it relates Exporting attribute control. This is reason why placed viewer box.)
+            vtx_descriptor_label = [
+                'unused0 (NOT support)', 'unused1 (NOT support)', 'unused2 (NOT support)', 'unused3 (NOT support)',
+                'unused4 (NOT support)', 'unused5 (NOT support)', 'NBT(NOT support)', 'light (NOT support)',
+                'tex_mtx_array (NOT support)', 'nrm_mtx_array (NOT support)', 'pos_mtx_array (NOT support)', 'tex7 (NOT work on GxModelViewer)',
+                'tex6 (NOT work on GxModelViewer)', 'tex5 (NOT work on GxModelViewer)', 'tex4 (NOT work on GxModelViewer)', 'tex3 (NOT work on GxModelViewer)',
+                'UV2', 'UV1', 'UV0', 'Vertex Color 1',
+                'Vertex Color 0', 'Normal', 'Position', 'tex7mtxidx (NOT support)',
+                'tex6mtxidx (NOT support)', 'tex5mtxidx (NOT support)', 'tex4mtxidx (NOT support)', 'tex3mtxidx (NOT support)',
+                'tex2mtxidx (NOT support)', 'tex1mtxidx (NOT support)', 'tex0mtxidx (NOT support)', 'pnmtxidx (NOT support)'
+            ]
+            vtx_descriptor_mask = [False,] * len(gcmf_material.vtx_descriptor)
+            vtx_descriptor_mask[16] = True
+            vtx_descriptor_mask[17] = True
+            vtx_descriptor_mask[18] = True
+            vtx_descriptor_mask[19] = True
+            vtx_descriptor_mask[20] = True
+#            vtx_descriptor_mask[21] = True
+#            vtx_descriptor_mask[22] = True
+            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, label_texts=vtx_descriptor_label, data_masks=vtx_descriptor_mask, property='vtx_descriptor', label_text='Export Arritube')
 
             # These are not "Material"
             # unk0x3C
@@ -192,7 +214,7 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
         try:
             gcmf_material = bpy.context.active_object.active_material.gcmf_material
             show_property_keys = [
-                'unk0x02', 'unk0x03','unk0x40', 'vertex_descriptor'
+                'vtx_descriptor', 'unk0x02', 'unk0x03','unk0x40'
             ]
             draw_checkbox_column(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, flags=gcmf_material.unk0x02, property='unk0x02', label_text='unk0x02')
             draw_checkbox_column(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, flags=gcmf_material.unk0x03, property='unk0x03', label_text='unk0x03')
@@ -206,28 +228,8 @@ class OBJECT_PT_GCMF_Material_Editor(bpy.types.Panel):
             self.layout.prop(gcmf_material, "transparency", text="transparency")
             self.layout.prop(gcmf_material, "unk0x14", text="unk0x14")
             self.layout.prop(gcmf_material, "unk0x15", text="unk0x15")
-            vtx_descriptor_label = [
-                'unused0 (NOT support)', 'unused1 (NOT support)', 'unused2 (NOT support)', 'unused3 (NOT support)',
-                'unused4 (NOT support)', 'unused5 (NOT support)', 'NBT(NOT support)', 'light (NOT support)',
-                'tex_mtx_array (NOT support)', 'nrm_mtx_array (NOT support)', 'pos_mtx_array (NOT support)', 'tex7 (NOT work on GxModelViewer)',
-                'tex6 (NOT work on GxModelViewer)', 'tex5 (NOT work on GxModelViewer)', 'tex4 (NOT work on GxModelViewer)', 'tex3 (NOT work on GxModelViewer)',
-                'UV2', 'UV1', 'UV0', 'Vertex Color 1 (NOT work on GxModelViewer)',
-                'Vertex Color 0', 'Normal', 'Position', 'tex7mtxidx (NOT support)',
-                'tex6mtxidx (NOT support)', 'tex5mtxidx (NOT support)', 'tex4mtxidx (NOT support)', 'tex3mtxidx (NOT support)',
-                'tex2mtxidx (NOT support)', 'tex1mtxidx (NOT support)', 'tex0mtxidx (NOT support)', 'pnmtxidx (NOT support)'
-            ]
-            vtx_descriptor_mask = [False,] * len(gcmf_material.vertex_descriptor)
-            vtx_descriptor_mask[16] = True
-            vtx_descriptor_mask[17] = True
-            vtx_descriptor_mask[18] = True
-            vtx_descriptor_mask[19] = True
-            vtx_descriptor_mask[20] = True
-#            vtx_descriptor_mask[21] = True
-#            vtx_descriptor_mask[22] = True
-            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, label_texts=vtx_descriptor_label, data_masks=vtx_descriptor_mask, property='vertex_descriptor', label_text='Vertex Descriptor')
             self.layout.label(text=MSG_LABEL_EDIT.format('Texture Indexes'))
             self.layout.prop(gcmf_material, "texture_indexes", text="values")
-            
 
             #These are not actual "gcmf Material"
             self.layout.label(text=MSG_LABEL_EDIT.format(NAME_GXMDLVIEW_OBJ_BOUND_SPHERE))
