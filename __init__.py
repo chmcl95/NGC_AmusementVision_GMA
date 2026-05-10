@@ -127,6 +127,9 @@ classes = (
     gcmf_setting.GCMF_ObjectSetting,
     gcmf_setting.GCMF_TextureSetting,
     gcmf_setting.GCMF_MaterialSetting,
+    # Operator
+    gcmf_editor.GCMF_OT_Add_GCMFTexture,
+    gcmf_editor.GCMF_OT_Remove_GCMFTexture,
     #Panel
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Object_Editor,

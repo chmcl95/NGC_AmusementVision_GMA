@@ -30,7 +30,7 @@ NAME_GXMDLVIEW_TEX_UNK0C = 'Unknown (0x0C)'
 NAME_GXMDLVIEW_TEX_UNK10 = 'Unknown (0x10)'
 
 MSG_NOT_FOUND_MATERIAL = 'Press \"New\" Button'
-MSG_NOT_FOUND_TEXTURE = 'Press \"New\" Button'
+MSG_NOT_FOUND_TEXTURE = 'Press \"Add GCMF Texture\" Button'
 MSG_HEX_NOALIGN = '{0}: {1:0X}'
 MSG_HEX_2 = '{0}: {1:02X}'
 MSG_HEX_4 = '{0}: {1:04X}'
@@ -62,6 +62,32 @@ def draw_checkbox_column(box: bpy.types.UILayout, data: bpy.types.AnyType, show_
         for i in range(length):
             col.prop(data, property, index=i, text='')
 
+# GCMF_Texture Add Button
+class GCMF_OT_Add_GCMFTexture(bpy.types.Operator):
+    bl_idname = "gcmf.add_texture"
+    bl_label = "Add GCMF Texture"
+    bl_description = "Add a new GCMF Texture slot to the active material"
+
+    def execute(self, context):
+        gcmf_material_property = context.active_object.active_material.gcmf_material
+        if len(gcmf_material_property.gcmf_textures) > 2:
+            self.report({'WARNING'}, "Maximum of 3 GCMF Textures allowed per material.")
+            return {'CANCELLED'}
+        gcmf_material_property.gcmf_textures.add()
+        return {'FINISHED'}
+    
+# GCMF_Texture Remove Button
+class GCMF_OT_Remove_GCMFTexture(bpy.types.Operator):
+    bl_idname = "gcmf.remove_texture"
+    bl_label = "Delete GCMF Texture"
+    bl_description = "Remove This GCMF Texture from the active material"
+
+    index: bpy.props.IntProperty()
+
+    def execute(self, context):
+        context.active_object.active_material.gcmf_material.gcmf_textures.remove(self.index)
+        return {'FINISHED'}
+    
 # GCMF Object Setting Show Panel
 class OBJECT_PT_GCMF_Object_Viewer(bpy.types.Panel):
     bl_idname = NAME_ID_PROPERTY_VIEWER_BASE.format('Object')
@@ -162,9 +188,6 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             val = (gcmf_material.unk0x14 << 8) + gcmf_material.unk0x15
             self.layout.label(text=MSG_HEX_4.format(NAME_GXMDLVIEW_MAT_UNK14, val))
 
-            for i, texture_idx_label in enumerate(NAME_GXMDLVIEW_MAT_TEXTURE_INDEXS):
-                _texture_idx_text = '{}: None'.format(texture_idx_label) if gcmf_material.texture_indexes[i] < 0 else MSG_HEX_NOALIGN.format(texture_idx_label, gcmf_material.texture_indexes[i])
-                self.layout.label(text=_texture_idx_text)
             # Vertex Descriptor (Actual this is Edit. But it relates Exporting attribute control. This is reason why placed viewer box.)
             vtx_descriptor_label = [
                 'unused0 (NOT support)', 'unused1 (NOT support)', 'unused2 (NOT support)', 'unused3 (NOT support)',
@@ -195,6 +218,8 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             for i, _unk0x40 in enumerate(gcmf_material.unk0x40):
                 val += (int(_unk0x40) << (31 - i))
             self.layout.label(text=MSG_HEX_8.format(NAME_GXMDLVIEW_OBJ_UNK40, val))
+
+            self.layout.operator("gcmf.add_texture", icon='ADD')
             
         # If faild to get "gcmf_material" from active Material
         except Exception as e:
@@ -302,6 +327,9 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
                     for i, b in enumerate(gcmf_texture.unk0x10):
                         val += (int(b) << (31 - i))
                     box.label(text=MSG_HEX_8.format(NAME_GXMDLVIEW_TEX_UNK10, val))
+
+                remove_button = self.layout.operator("gcmf.remove_texture", icon='REMOVE')
+                remove_button.index = idx
 
         # If faild to get "gcmf_textures" from active Texture
         except Exception as e:
