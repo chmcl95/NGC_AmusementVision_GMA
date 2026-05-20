@@ -10,7 +10,7 @@ from .gcmf import Gcmf, Attribute, \
     Submesh, Material, \
     VertexAttribute, VertexRenderFlag, DisplatListHeader, \
     DisplayList, Vertex, Strip
-from .gcmf_node import GCMFTextureNode
+from .gcmf_node import GCMFTextureNode, collect_gcmf_texture_nodes, resolve_texture_index_from_image
 
 # Messages
 MSG_INFO_INIT    = '---- {0} ----'
