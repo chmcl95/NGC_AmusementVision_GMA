@@ -7,11 +7,12 @@ from . import import_gma
 from . import gcmf_editor
 # TODO: rename setting to property 
 from . import gcmf_setting
+from . import gcmf_node
 
 bl_info = {
     "name": "Amusement Vision GMA format",
     "author": "CH-MCL",
-    "version": (0, 5, 420, 0),
+    "version": (0, 5, 999, 0),
     "blender": (4, 2, 0),
     "location": "File > Import-Export > Amusement Vision Model (.gma)",
     "description": "Imports a Amusement Vision 3d model.",
@@ -27,6 +28,8 @@ if "bpy" in locals():
     # TODO:remove import_gml
 #    if "import_gml" in locals():
 #        importlib.reload(import_gml)
+    if "gcmf_node" in locals():
+        importlib.reload(gcmf_node)
     if "gcmf_setting" in locals():
         importlib.reload(gcmf_setting)
     if "gcmf_editor" in locals():
@@ -124,12 +127,12 @@ classes = (
     EXPORT_UL_GMA,
 #    IMPORT_UL_GML,
     #CustomProperty
+    gcmf_node.GCMFTextureNode,
     gcmf_setting.GCMF_ObjectSetting,
-    gcmf_setting.GCMF_TextureSetting,
     gcmf_setting.GCMF_MaterialSetting,
     # Operator
-    gcmf_editor.GCMF_OT_Add_GCMFTexture,
-    gcmf_editor.GCMF_OT_Remove_GCMFTexture,
+    # gcmf_editor.GCMF_OT_Add_GCMFTexture,
+    # gcmf_editor.GCMF_OT_Remove_GCMFTexture,
     #Panel
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Object_Editor,
@@ -144,6 +147,8 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
+    # GCMFTextureNode をシェーダーノードとして登録
+    bpy.types.NODE_MT_add.append(gcmf_node._add_node_menu)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     # Custom PropertyGroup
@@ -154,6 +159,7 @@ def register():
     
 
 def unregister():
+    bpy.types.NODE_MT_add.remove(gcmf_node._add_node_menu)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 

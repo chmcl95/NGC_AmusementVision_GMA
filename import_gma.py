@@ -1,13 +1,13 @@
 import array
-
 import bmesh
 import bpy
 import mathutils
 import numpy
 
 from .gma import Gma
-from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material, DisplayList, Attribute
+from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap
 from .gml import Gml
+from .gcmf_node import GCMFTextureNode, _ensure_nodegroup
 
 # Messages
 MSG_INFO_INIT = '---- {0} ----'
@@ -15,32 +15,38 @@ MSG_INFO_DATA = '{0}: {1}'
 MSG_INFO_DATA_HEX = '{0}: {1:#X}'
 
 # Names
-NAME_MATERIAL = 'material_{0:03}'
-NAME_TEXTURE = 'gxtex_{0:03}'
+NAME_MATERIAL   = 'material_{0:03}'
 NAME_TPL_COMMON = 'tpl_common_{0:03}'
-NAME_TPL = 'tpl_{0:03}'
-NAME_POLYGON = 'polygon_{0}'
-NAME_ARMATURE = '{0}_armature'
-NAME_NODE = 'node_{0}'
+NAME_TPL        = 'tpl_{0:03}'
+NAME_POLYGON    = 'polygon_{0}'
+NAME_ARMATURE   = '{0}_armature'
+NAME_NODE       = 'node_{0}'
 NAME_VERTEXCOLOR = 'color{0}'
-NAME_UV = 'uv{0}'
+NAME_UV         = 'uv{0}'
 
-# Storage Mesh datas
+
+# ---------------------------------------------------------------------------
+# Mesh data container
+# ---------------------------------------------------------------------------
 class Mesh_data:
     def __init__(self):
-        self.normals = []  # Collect for "Custom Split Normals"
-        self.color0s = []
-        self.color1s = []
-        self.tex0s = []
-        self.tex1s = []
-        self.tex2s = []
-        self.tex3s = []
-        self.tex4s = []
-        self.tex5s = []
-        self.tex6s = []
-        self.tex7s = []
+        self.normals  = []
+        self.color0s  = []
+        self.color1s  = []
+        self.tex0s    = []
+        self.tex1s    = []
+        self.tex2s    = []
+        self.tex3s    = []
+        self.tex4s    = []
+        self.tex5s    = []
+        self.tex6s    = []
+        self.tex7s    = []
 
-def convert_value2flags(value: int, dest_flags: list):
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+def convert_value2flags(value, dest_flags):
     max_bit = len(dest_flags)
     flags = [False] * max_bit
     for i in range(max_bit):
@@ -49,114 +55,131 @@ def convert_value2flags(value: int, dest_flags: list):
     return flags
 
 
-def _get_or_create_image(images: bpy.types.BlendDataImages, name: str):
-    """Return a bpy.data.images entry, creating a placeholder if absent."""
+def _get_or_create_image(images: dict, name: str) -> bpy.types.Image:
     if name not in images:
         img = bpy.data.images.new(name, width=1, height=1)
-        img.source = 'FILE'
+        img.source   = 'FILE'
         img.filepath = name
         images[name] = img
     return images[name]
 
 
 # ---------------------------------------------------------------------------
-# Generate Blender's Material
+# Generate Blender Material  (カスタムノード版)
 # ---------------------------------------------------------------------------
-
-def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list, images, is_alpha: bool):
+def generate_material(material, mat_idx: int, gcmf_texs_data: list,
+                      images: dict, is_alpha: bool) -> bpy.types.Material:
     """
-    Create a Blender material and populate gcmf_material custom properties.
-    Textures are stored in gcmf_material.gcmf_textures collection; images are
-    wired into a Principled BSDF node tree for basic viewport preview.
+    2.79版の generate_texture() + texture_slots 設定に相当する処理を
+    GCMFTextureNode として再現する。
+
+    2.79版との対応:
+      bpy.data.textures.new(...)   →  node_tree.nodes.new('GCMFTextureNode')
+      tex.image = ...              →  gcmf_node.image = img
+      tex.gcmf_texture.*  = ...   →  gcmf_node.* = ...
+      mat.texture_slots[i] = tex  →  links.new(gcmf_node → bsdf)
     """
     mat = bpy.data.materials.new(name=NAME_MATERIAL.format(mat_idx))
     mat.use_nodes = True
 
-    # ---- Store original GCMF values ----
+    # ---- GCMF_MaterialSetting ----
     gcmf_material = mat.gcmf_material
-    gcmf_material.unk0x02 = convert_value2flags(material.unk0x02, gcmf_material.unk0x02)
-    gcmf_material.unk0x03 = convert_value2flags(material.unk0x03, gcmf_material.unk0x03)
-    gcmf_material.color0 = material.color0
-    gcmf_material.color1 = material.color1
-    gcmf_material.color2 = material.color2
-    gcmf_material.emission = material.emission
-    gcmf_material.transparency = material.transparency
-    gcmf_material.unk0x14 = material.unk0x14
-    gcmf_material.unk0x15 = material.unk0x15
+    gcmf_material.unk0x02        = convert_value2flags(material.unk0x02, gcmf_material.unk0x02)
+    gcmf_material.unk0x03        = convert_value2flags(material.unk0x03, gcmf_material.unk0x03)
+    gcmf_material.color0         = material.color0
+    gcmf_material.color1         = material.color1
+    gcmf_material.color2         = material.color2
+    gcmf_material.emission       = material.emission
+    gcmf_material.transparency   = material.transparency
+    gcmf_material.unk0x14        = material.unk0x14
+    gcmf_material.unk0x15        = material.unk0x15
     gcmf_material.texture_indexes = material.texture_indexs
-    gcmf_material.vtx_descriptor = convert_value2flags(material.vtx_descriptor.pack(), gcmf_material.vtx_descriptor)
-    gcmf_material.order_index = mat_idx
+    gcmf_material.vtx_descriptor = convert_value2flags(
+        material.vtx_descriptor.pack(), gcmf_material.vtx_descriptor)
+    gcmf_material.order_index    = mat_idx
 
-    # ---- Basic node setup ----
+    # ---- ノードツリー初期化 ----
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
     nodes.clear()
 
-    bsdf = nodes.new('ShaderNodeBsdfPrincipled')
-    bsdf.location = (0, 0)
+    # Principled BSDF + Output
+    bsdf   = nodes.new('ShaderNodeBsdfPrincipled')
+    bsdf.location = (300, 0)
     output = nodes.new('ShaderNodeOutputMaterial')
-    output.location = (300, 0)
+    output.location = (600, 0)
     links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
 
-    # Diffuse colour from color0
+    # ベースカラーをマテリアルの color0 で初期化
     r = material.color0[0] / 0xFF
     g = material.color0[1] / 0xFF
     b = material.color0[2] / 0xFF
     a = material.transparency / 0xFF if not is_alpha else 0.0
     bsdf.inputs['Base Color'].default_value = (r, g, b, 1.0)
     bsdf.inputs['Alpha'].default_value = a
-
     if is_alpha or material.transparency < 0xFF:
         mat.blend_method = 'BLEND'
 
-    # ---- Per-texture settings (replaces old texture_slots) ----
-    tex_x_offset = -600
+    # ---- GCMFTextureNode を生成してデータを移植 ----
+    # 2.79版: for i, texid in enumerate(material.texture_indexs):
+    #             tex = bpy.data.textures.new(...); mat.texture_slots[i] = tex
+    tex_x = -400
+    first_gcmf_node = None
+
     for i, texid in enumerate(material.texture_indexs):
         if texid < 0:
             continue
-
-        # Append a new slot in the collection
-        ts = gcmf_material.gcmf_textures.add()
         raw_tex = gcmf_texs_data[texid] if texid < len(gcmf_texs_data) else None
-        if raw_tex is not None:
-            ts.unk0x00 = convert_value2flags(raw_tex.unk0x00, ts.unk0x00)
-            ts.mipmap = convert_value2flags(raw_tex.mipmap, ts.mipmap)
-            ts.uv_wrap = convert_value2flags(raw_tex.uv_wrap, ts.uv_wrap)
-            ts.texture_index = raw_tex.texture_index
-            ts.unk0x06 = raw_tex.unk0x06
-            ts.anisotropy = convert_value2flags(raw_tex.anisotropy, ts.anisotropy)
-            ts.unk0x0C = convert_value2flags(raw_tex.unk0x0C, ts.unk0x0C)
-            ts.is_swappable = convert_value2flags(raw_tex.is_swappable, ts.is_swappable)
-            ts.unk0x10 = convert_value2flags(raw_tex.unk0x10, ts.unk0x10)
-            ts.order_index = texid
+        if raw_tex is None:
+            continue
 
-            # Image name
-            img_id = raw_tex.texture_index
-            if img_id >= 0:
-                if ts.unk0x00[Texture_Flags0x00.COMMON_TEX]:
-                    img_name = NAME_TPL_COMMON.format(img_id)
-                else:
-                    img_name = NAME_TPL.format(img_id)
-                img = _get_or_create_image(images, img_name)
+        # --- GCMFTextureNode を生成 (2.79版 bpy.data.textures.new() 相当) ---
+        gcmf_node = nodes.new('GCMFTextureNode')
+        gcmf_node.location  = (tex_x, 300 - i * 320)
+        gcmf_node.label     = f'GCMF Tex [{i}]'
 
-                # Wire first texture into the BSDF for a basic preview
-                if i == 0:
-                    tex_node = nodes.new('ShaderNodeTexImage')
-                    tex_node.image = img
-                    tex_node.location = (tex_x_offset, 200)
-                    links.new(tex_node.outputs['Color'], bsdf.inputs['Base Color'])
-                    if is_alpha:
-                        links.new(tex_node.outputs['Alpha'], bsdf.inputs['Alpha'])
-                    tex_x_offset -= 300
+        # --- メタデータを移植 (2.79版 tex.gcmf_texture.* = ... 相当) ---
+        gcmf_node.unk0x00       = convert_value2flags(raw_tex.unk0x00,    gcmf_node.unk0x00)
+        gcmf_node.mipmap        = convert_value2flags(raw_tex.mipmap,     gcmf_node.mipmap)
+        gcmf_node.uv_wrap       = convert_value2flags(raw_tex.uv_wrap,    gcmf_node.uv_wrap)
+        gcmf_node.texture_index = raw_tex.texture_index
+        gcmf_node.order_index   = texid
+        gcmf_node.unk0x06       = raw_tex.unk0x06
+        gcmf_node.anisotropy    = convert_value2flags(raw_tex.anisotropy,    gcmf_node.anisotropy)
+        gcmf_node.unk0x0C       = convert_value2flags(raw_tex.unk0x0C,       gcmf_node.unk0x0C)
+        gcmf_node.is_swappable  = convert_value2flags(raw_tex.is_swappable,  gcmf_node.is_swappable)
+        gcmf_node.unk0x10       = convert_value2flags(raw_tex.unk0x10,       gcmf_node.unk0x10)
+
+        # --- 画像を設定 (2.79版 tex.image = img 相当) ---
+        img_id = raw_tex.texture_index
+        if img_id >= 0:
+            is_common = gcmf_node.unk0x00[Texture_Flags0x00.COMMON_TEX]
+            img_name  = NAME_TPL_COMMON.format(img_id) if is_common else NAME_TPL.format(img_id)
+            img = _get_or_create_image(images, img_name)
+            gcmf_node.image = img
+            # 内部 NodeGroup の ShaderNodeTexImage にも反映
+            gcmf_node._sync_image()
+
+        # --- BSDF に接続 (2.79版 mat.texture_slots[i] = tex 相当) ---
+        # スロット0のみ Base Color に直結（プレビュー用）
+        # 2枚目以降は接続するがユーザーが自由に組み替え可能
+        if i == 0:
+            links.new(gcmf_node.outputs['Color'], bsdf.inputs['Base Color'])
+            if is_alpha:
+                links.new(gcmf_node.outputs['Alpha'], bsdf.inputs['Alpha'])
+            first_gcmf_node = gcmf_node
+        # 2枚目以降はノードを配置するが接続はユーザーに委ねる
+        # （接続したい場合は gcmf_node.outputs['Color'] → MixRGB などへ）
+
+        tex_x -= 300
 
     return mat
 
 
 # ---------------------------------------------------------------------------
-# Generate Blender's UV
+# UV / VertexColor
 # ---------------------------------------------------------------------------
-
-def generate_uv(mesh: bpy.types.Mesh, channel_name: str, uvs: list):
+def generate_uv(mesh, channel_name, uvs):
     if channel_name not in mesh.uv_layers:
         mesh.uv_layers.new(name=channel_name)
     uv_layer = mesh.uv_layers[channel_name]
@@ -164,8 +187,7 @@ def generate_uv(mesh: bpy.types.Mesh, channel_name: str, uvs: list):
         uv_layer.data[i].uv = uvs[loop.vertex_index]
 
 
-# Generate Blender's VertexColor
-def generate_vertexcolor(mesh: bpy.types.Mesh, color_name: str, vcolors: list):
+def generate_vertexcolor(mesh, color_name, vcolors):
     if color_name not in mesh.vertex_colors:
         mesh.vertex_colors.new(name=color_name)
     vc_layer = mesh.vertex_colors[color_name]
@@ -173,8 +195,10 @@ def generate_vertexcolor(mesh: bpy.types.Mesh, color_name: str, vcolors: list):
         vc_layer.data[i].color = vcolors[loop.vertex_index]
 
 
-# Generate mesh from Gcmf Object
-def generate_mesh(mesh: bpy.types.Mesh, bm: bmesh.types.BMesh, matid: int, mesh_data: Mesh_data, dlist: DisplayList, mtxidxs: list, mtxs: list, first_iscw: bool):
+# ---------------------------------------------------------------------------
+# Mesh generation (変更なし)
+# ---------------------------------------------------------------------------
+def generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, first_iscw):
     v0 = mathutils.Vector((0, 0, 0))
     v1 = mathutils.Vector((0, 0, 0))
     v2 = mathutils.Vector((0, 0, 0))
@@ -182,32 +206,23 @@ def generate_mesh(mesh: bpy.types.Mesh, bm: bmesh.types.BMesh, matid: int, mesh_
     for strip in dlist.strips:
         for i, vertex in enumerate(strip.vertexs):
             vtx = mathutils.Vector((vertex.pos[0], vertex.pos[1], vertex.pos[2]))
-            # Point_Normal_Matrix Index
             pnmtxidx = vertex.pnmtxidx
             if pnmtxidx >= 0:
-                if (pnmtxidx > 0x18) or ((pnmtxidx % 3) != 0):
-#                    print(MSG_INFO_DATA.format('pnmtxidx', pnmtxidx))
-                    pass
-                else:
+                if not ((pnmtxidx > 0x18) or ((pnmtxidx % 3) != 0)):
                     ridx = int((pnmtxidx / 3) - 1)
-#                    print(ridx)
-                    idx = mtxidxs[ridx]
-                    if idx < 0:
-#                        print(MSG_INFO_DATA.format('matrix_index', idx))
-                        pass
-                    else:
-                        mtx = mtxs[idx].mtx
-                        vtx = mtx @ vtx  # '@' replaces '*' for matrix-vector in 2.80+
+                    idx  = mtxidxs[ridx]
+                    if idx >= 0:
+                        vtx = mtxs[idx].mtx @ vtx
             v = bm.verts.new(vtx)
             vec = mathutils.Vector((vertex.nrm[0], vertex.nrm[1], vertex.nrm[2]))
             v.normal = vec
             mesh_data.normals.append(vec.normalized())
-            clr = mathutils.Vector((vertex.clr0[0] / 0xFF, vertex.clr0[1] / 0xFF,
-                                    vertex.clr0[2] / 0xFF, vertex.clr0[3] / 0xFF))
-            mesh_data.color0s.append(clr)
-            clr = mathutils.Vector((vertex.clr1[0] / 0xFF, vertex.clr1[1] / 0xFF,
-                                    vertex.clr1[2] / 0xFF, vertex.clr1[3] / 0xFF))
-            mesh_data.color1s.append(clr)
+            mesh_data.color0s.append(mathutils.Vector((
+                vertex.clr0[0] / 0xFF, vertex.clr0[1] / 0xFF,
+                vertex.clr0[2] / 0xFF, vertex.clr0[3] / 0xFF)))
+            mesh_data.color1s.append(mathutils.Vector((
+                vertex.clr1[0] / 0xFF, vertex.clr1[1] / 0xFF,
+                vertex.clr1[2] / 0xFF, vertex.clr1[3] / 0xFF)))
             mesh_data.tex0s.append(mathutils.Vector((vertex.tex0[0], -(vertex.tex0[1] - 1.0))))
             mesh_data.tex1s.append(mathutils.Vector((vertex.tex1[0], -(vertex.tex1[1] - 1.0))))
             mesh_data.tex2s.append(mathutils.Vector((vertex.tex2[0], -(vertex.tex2[1] - 1.0))))
@@ -221,12 +236,8 @@ def generate_mesh(mesh: bpy.types.Mesh, bm: bmesh.types.BMesh, matid: int, mesh_
                 iscw = first_iscw
             if i > 1:
                 v2 = v
-                if iscw:
-                    face = bm.faces.new((v2, v1, v0))
-                    iscw = False
-                else:
-                    face = bm.faces.new((v0, v1, v2))
-                    iscw = True
+                face = bm.faces.new((v2, v1, v0) if iscw else (v0, v1, v2))
+                iscw = not iscw
                 face.material_index = matid
                 v0 = v1
                 v1 = v2
@@ -237,156 +248,111 @@ def generate_mesh(mesh: bpy.types.Mesh, bm: bmesh.types.BMesh, matid: int, mesh_
     bm.to_mesh(mesh)
 
 
+def generate_attribute(attribute):
+    if attribute.is_16bit:      return 'is_16bit'
+    if attribute.is_stiching:   return 'is_stiching'
+    if attribute.is_skin:       return 'is_skin'
+    if attribute.is_effective:  return 'is_effective'
+    return "default"
+
+
 # ---------------------------------------------------------------------------
-# Generate GCMF Attribute
+# Import entry point
 # ---------------------------------------------------------------------------
+def load(filepath, little_endian=False):
+    # NodeGroup を事前に準備
+    _ensure_nodegroup()
 
-def generate_attribute(attribute: Attribute):
-    if attribute.is_16bit:
-        return 'is_16bit'
-    elif attribute.is_stiching:
-        return 'is_stiching'
-    elif attribute.is_skin:
-        return 'is_skin'
-    elif attribute.is_effective:
-        return 'is_effective'
-    else:
-        return "default"
-
-
-# Import gma
-def load(filepath: str, little_endian=False):
     with open(filepath, 'rb') as file:
         sel_endian = '<' if little_endian else '>'
-
-        gma = Gma()
+        gma    = Gma()
         gma.unpack(file, sel_endian)
         images = {}
 
-        texid = 0
-        entrys = gma.entrys
+        for i, entry in enumerate(gma.entrys):
+            print(MSG_INFO_INIT.format('Generate Blender Mesh'))
+            print(MSG_INFO_DATA.format('Mesh Name', entry.name))
 
-        for i, entry in enumerate(entrys):
-#            print(MSG_INFO_INIT.format('Generate Blender Mesh'))
-#            print(MSG_INFO_DATA.format('Mesh Name', entry.name))
-            mesh_name = NAME_POLYGON.format(i)
-            mesh = bpy.data.meshes.new(mesh_name)
-            obj = bpy.data.objects.new(entry.name, mesh)
+            mesh = bpy.data.meshes.new(NAME_POLYGON.format(i))
+            obj  = bpy.data.objects.new(entry.name, mesh)
 
             scene = bpy.context.scene
             scene.collection.objects.link(obj)
             bpy.context.view_layer.objects.active = obj
             obj.select_set(True)
 
-            bm = bmesh.new()
-            gcmf = entry.gcmf
-            # Store Normals, UVs, VertexColors, etc
+            bm        = bmesh.new()
+            gcmf      = entry.gcmf
             mesh_data = Mesh_data()
 
-            obj.gcmf_object.index = i
+            obj.gcmf_object.index     = i
             obj.gcmf_object.attribute = generate_attribute(gcmf.attribute)
-            obj.gcmf_object.transparent_material_count = gcmf.transparent_count
 
-            flags = numpy.array(0x00, dtype='i4')
             total_flags = numpy.array(0x00, dtype='i4')
-
-            # Texture
-#            print(MSG_INFO_DATA.format('Texture Count', len(gcmf.textures)))
-            # Keep raw GCMF texture structs for property population
             gcmf_texs_data = gcmf.textures
+            mtxidxs        = gcmf.mtx_idxs
+            mtxs           = gcmf.mtxs
 
-            mtxidxs = gcmf.mtx_idxs
-            mtxs = gcmf.mtxs
-
-#            print(MSG_INFO_DATA.format('Submesh Count', len(gcmf.submeshs)))
-            for mat_idx, submesh in enumerate(gcmf.submeshs):
-                #Vertex Attribute
-                attribute = submesh.material.vtx_descriptor
-                flags = attribute.pack()
-                #Store all submesh's attribute
+            for matid, submesh in enumerate(gcmf.submeshs):
+                attribute   = submesh.material.vtx_descriptor
+                flags       = attribute.pack()
                 total_flags = flags | total_flags
                 for j, dlist in enumerate(submesh.dlists):
-                    is_cw = (j % 2 == 1)
-                    # even : ccw
-                    # odd  : cw
-                    generate_mesh(mesh, bm, mat_idx, mesh_data, dlist, mtxidxs, mtxs, is_cw)
+                    generate_mesh(mesh, bm, matid, mesh_data, dlist,
+                                  mtxidxs, mtxs, (j % 2 == 1))
 
-            #Generate Vertex_Attribute from all submeshs's vertex_attribute
             all_attribute = VertexAttribute()
             all_attribute.unpack(total_flags)
             mesh.update()
 
-            # Normals (Blender 4.1+ dropped normals_split_custom_set_from_vertices)
+            # Normals
             if all_attribute.gx_va_nrm:
                 mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
                 try:
-                    # Blender 4.1+
                     mesh.normals_split_custom_set_from_vertices(mesh_data.normals)
                 except AttributeError:
-                    # Blender 4.1 removed use_auto_smooth; normals set via corner_normals
                     if hasattr(mesh, 'use_auto_smooth'):
                         mesh.use_auto_smooth = True
                         mesh.normals_split_custom_set_from_vertices(mesh_data.normals)
 
-            if all_attribute.gx_va_clr0:
-                generate_vertexcolor(mesh, NAME_VERTEXCOLOR.format(0), mesh_data.color0s)
-            if all_attribute.gx_va_clr1:
-                generate_vertexcolor(mesh, NAME_VERTEXCOLOR.format(1), mesh_data.color1s)
-            if all_attribute.gx_va_tex0:
-                generate_uv(mesh, NAME_UV.format(0), mesh_data.tex0s)
-            if all_attribute.gx_va_tex1:
-                generate_uv(mesh, NAME_UV.format(1), mesh_data.tex1s)
-            if all_attribute.gx_va_tex2:
-                generate_uv(mesh, NAME_UV.format(2), mesh_data.tex2s)
-            if all_attribute.gx_va_tex3:
-                generate_uv(mesh, NAME_UV.format(3), mesh_data.tex3s)
-            if all_attribute.gx_va_tex4:
-                generate_uv(mesh, NAME_UV.format(4), mesh_data.tex4s)
-            if all_attribute.gx_va_tex5:
-                generate_uv(mesh, NAME_UV.format(5), mesh_data.tex5s)
-            if all_attribute.gx_va_tex6:
-                generate_uv(mesh, NAME_UV.format(6), mesh_data.tex6s)
-            if all_attribute.gx_va_tex7:
-                generate_uv(mesh, NAME_UV.format(7), mesh_data.tex7s)
+            if all_attribute.gx_va_clr0: generate_vertexcolor(mesh, NAME_VERTEXCOLOR.format(0), mesh_data.color0s)
+            if all_attribute.gx_va_clr1: generate_vertexcolor(mesh, NAME_VERTEXCOLOR.format(1), mesh_data.color1s)
+            if all_attribute.gx_va_tex0: generate_uv(mesh, NAME_UV.format(0), mesh_data.tex0s)
+            if all_attribute.gx_va_tex1: generate_uv(mesh, NAME_UV.format(1), mesh_data.tex1s)
+            if all_attribute.gx_va_tex2: generate_uv(mesh, NAME_UV.format(2), mesh_data.tex2s)
+            if all_attribute.gx_va_tex3: generate_uv(mesh, NAME_UV.format(3), mesh_data.tex3s)
+            if all_attribute.gx_va_tex4: generate_uv(mesh, NAME_UV.format(4), mesh_data.tex4s)
+            if all_attribute.gx_va_tex5: generate_uv(mesh, NAME_UV.format(5), mesh_data.tex5s)
+            if all_attribute.gx_va_tex6: generate_uv(mesh, NAME_UV.format(6), mesh_data.tex6s)
+            if all_attribute.gx_va_tex7: generate_uv(mesh, NAME_UV.format(7), mesh_data.tex7s)
 
-            # Material
-            texid_offset = 0
-            for mat_idx, submesh in enumerate(gcmf.submeshs):
-                material = submesh.material
-                is_alpha = mat_idx >= gcmf.opaque_count
-                mat = generate_material(material, mat_idx, gcmf_texs_data, images, is_alpha)
-                mat.gcmf_material.unk0x3C = submesh.unk0x3C
-                mat.gcmf_material.unk0x40 = convert_value2flags(
+            # マテリアル生成
+            for matid, submesh in enumerate(gcmf.submeshs):
+                is_alpha = matid >= gcmf.opaque_count
+                mat = generate_material(submesh.material, matid,
+                                        gcmf_texs_data, images, is_alpha)
+                mat.gcmf_material.unk0x3C  = submesh.unk0x3C
+                mat.gcmf_material.unk0x40  = convert_value2flags(
                     submesh.unk0x40, mat.gcmf_material.unk0x40)
+                mat.gcmf_material.boundingsphere_origin = submesh.boundingsphere_origin
                 obj.data.materials.append(mat)
 
             bm.free()
             mesh.update()
-            # Rotate X-axis 90 deg
             bpy.context.object.rotation_euler[0] = 1.5708
 
-            #Transform to Node
             if bpy.context.mode == 'EDIT_ARMATURE':
                 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-            if(len(gcmf.mtxs) > 0):
-                #Add Armature
-                bpy.ops.object.add(type='ARMATURE', location=(0, 0, 0), enter_editmode=False)
-                armature_name = NAME_ARMATURE.format(entry.name)
-                bpy.context.object.name = armature_name
-
+            if len(gcmf.mtxs) > 0:
+                bpy.ops.object.add(type='ARMATURE', location=(0,0,0), enter_editmode=False)
+                bpy.context.object.name = NAME_ARMATURE.format(entry.name)
                 for j, matrix in enumerate(gcmf.mtxs):
-                    #Edit Mode
                     bpy.ops.object.mode_set(mode='EDIT')
-                    #Instatiate Bone
-                    name = NAME_NODE.format(j)
-                    b = bpy.context.object.data.edit_bones.new(name)
-                    #Apply Matrix to EditBone object
+                    b = bpy.context.object.data.edit_bones.new(NAME_NODE.format(j))
                     b.head = mathutils.Vector((0.0, 0.0, 0.0))
                     b.tail = mathutils.Vector((0.0, 0.1, 0.0))
                     b.transform(matrix.mtx, scale=True, roll=True)
-
-                # Object Mode
                 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
                 bpy.context.object.rotation_euler[0] = 1.5708
 
