@@ -33,8 +33,12 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
     unk0x15: bpy.props.IntProperty(name="unk0x15", default=0x00, min=0x00, max=0xFF)
 
     _vtx_descriptor = [False] * 32
-    _vtx_descriptor[9] = True
-    _vtx_descriptor[10] = True
+    # UV0
+    _vtx_descriptor[18] = True
+    # Normal
+    _vtx_descriptor[21] = True
+    # Position
+    _vtx_descriptor[22] = True
     vtx_descriptor: bpy.props.BoolVectorProperty(name="vtx_descriptor", default=_vtx_descriptor,
                                                     subtype='NONE', size=32)
     texture_indexes: bpy.props.IntVectorProperty(name="texture_indices", default=(-1, -1, -1),
@@ -55,6 +59,7 @@ class GCMF_MaterialSetting(bpy.types.PropertyGroup):
     
     # UI
     _show_propertys_default = [False] * 4
+    # Vertex Descriptor
     _show_propertys_default[0] = True
     show_propertys: bpy.props.BoolVectorProperty(name="Edit Boxs", default=tuple(_show_propertys_default),
                                            subtype='NONE', size=4)

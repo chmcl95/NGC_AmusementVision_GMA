@@ -31,7 +31,7 @@ NAME_GXMDLVIEW_TEX_UNK0C = 'Unknown (0x0C)'
 NAME_GXMDLVIEW_TEX_UNK10 = 'Unknown (0x10)'
 
 MSG_NOT_FOUND_MATERIAL = 'Press \"New\" Button'
-MSG_NOT_FOUND_TEXTURE = 'Press \"Add GCMF Texture\" Button'
+MSG_NOT_FOUND_TEXTURE = 'Add \"GCMF Texture\" on Material Node Tree'
 MSG_HEX_NOALIGN = '{0}: {1:0X}'
 MSG_HEX_2 = '{0}: {1:02X}'
 MSG_HEX_4 = '{0}: {1:04X}'
@@ -153,13 +153,7 @@ class OBJECT_PT_GCMF_Object_Editor(bpy.types.Panel):
             self.layout.prop(gcmf_object, "index", text="object index")
             # attribute
             self.layout.prop(gcmf_object, "attribute", text="attribute")
-            # box_attribute = self.layout.box()
-            # col_attribute = box_attribute.column_flow(columns=8)
-            # texts = ['flags',\
-            #         'is_effective', 'is_skin', 'is_stiching', 'is_unk0x01',
-            #         'is_16bit']
-            # for text in texts:
-            #    col_attribute.label(text)
+
             self.layout.prop(gcmf_object, "transparent_material_count", text="Transparent Material Count")
 
         # If faild to get "gcmf_object" from active Object
@@ -307,11 +301,10 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
 
             if len(gcmf_nodes) == 0:
                 self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
-                self.layout.operator("gcmf.add_texture", icon='ADD')
+                # self.layout.operator("gcmf.add_texture", icon='ADD')
                 return
 
             for idx, gcmf_node in enumerate(gcmf_nodes):
-                # 折りたたみヘッダー（show_propertys[0] をトグルフラグに流用）
                 header = self.layout.row()
                 is_open = gcmf_node.show_gcmf_textures
                 header.prop(gcmf_node, "show_gcmf_textures", index=0,
@@ -322,7 +315,7 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
                     box = self.layout.box()
                     # image
                     box.label(text=f"Image: {gcmf_node.image.name if gcmf_node.image else '(none)'}")
-                    # unk0x00 / mipmap / uv_wrap → 結合してHEX表示
+                    # unk0x00 / mipmap / uv_wrap
                     val = 0x00
                     for i, b in enumerate(gcmf_node.unk0x00):
                         val += (int(b) << (15 - i))
@@ -351,94 +344,94 @@ class OBJECT_PT_GCMF_Texture_Viewer(bpy.types.Panel):
 
         except Exception as e:
             self.layout.label(text=f"Error occurred: {e}")
-#            self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
 
-class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
-    bl_parent_id = NAME_ID_PROPERTY_VIEWER_BASE.format('Texture')
-    bl_idname = NAME_ID_PROPERTY_EDITOR_BASE.format('Texture')
-    bl_label = NAME_LABEL_PROPERTY_BASE.format('Texture Editor')
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "material"
 
-    def draw(self, context):
-        try:
-            mat = bpy.context.active_object.active_material
-            gcmf_texture_nodes = collect_gcmf_texture_nodes(mat)
+# class OBJECT_PT_GCMF_Texture_Editor(bpy.types.Panel):
+#     bl_parent_id = NAME_ID_PROPERTY_VIEWER_BASE.format('Texture')
+#     bl_idname = NAME_ID_PROPERTY_EDITOR_BASE.format('Texture')
+#     bl_label = NAME_LABEL_PROPERTY_BASE.format('Texture Editor')
+#     bl_space_type = 'PROPERTIES'
+#     bl_region_type = 'WINDOW'
+#     bl_context = "material"
 
-            if len(gcmf_texture_nodes) == 0:
-                self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
-                return
+#     def draw(self, context):
+#         try:
+#             mat = bpy.context.active_object.active_material
+#             gcmf_texture_nodes = collect_gcmf_texture_nodes(mat)
 
-            show_property_keys = [
-                'unk0x00', 'mipmap', 'uv_wrap', 'anisotropy',
-                'unk0x0C', 'is_swappable', 'unk0x10'
-            ]
-            for idx, gcmf_texture in enumerate(gcmf_texture_nodes):
-                is_open = gcmf_texture.show_gcmf_textures_edit
-                self.layout.prop(gcmf_texture, "show_gcmf_textures_edit", index=1,
-                                 icon='TRIA_DOWN' if is_open else 'TRIA_RIGHT',
-                                 emboss=False,
-                                 text=f"Edit GCMF Texture [{idx}]")
-                if is_open:
-                    box = self.layout.box()
-                    # image
-                    box.template_ID(gcmf_texture, "image", open="image.open")
-                    # texture_index
-                    box.label(text=NAME_GXMDLVIEW_TEX_TPL_IDX)
-                    box.prop(gcmf_texture, "texture_index", text="value")
-                    # unk0x00
-                    unk0x00_labels = [''] * len(gcmf_texture.unk0x00)
-                    unk0x00_labels[10] = 'Enable carcmntex.tpl Texture (F-ZERO GX)'
-                    unk0x00_labels[11] = 'Enable normal reflection'
-                    unk0x00_labels_mask = [False] * len(gcmf_texture.unk0x00)
-                    unk0x00_labels_mask[10] = True
-                    unk0x00_labels_mask[11] = True
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                     label_texts=unk0x00_labels, data_masks=unk0x00_labels_mask,
-                                     property='unk0x00', label_text='unk0x00')
-                    # mipmap
-                    mip_map_labels = [
-                        'unknown7', 'unknown6', 'unknown5', 'unknown4',
-                        'near', 'unknown2', 'unknown1', 'enable'
-                    ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                     label_texts=mip_map_labels,
-                                     data_masks=[True] * len(gcmf_texture.mipmap),
-                                     property='mipmap', label_text='MIPMAP')
-                    # uv_wrap
-                    uv_wrap_labels = [
-                        'unknown7', 'unknown6', 'Y-Mirror', 'Y-Repeat',
-                        'X-Mirror', 'X-Repeat', 'unknown1', 'unknown0'
-                    ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                     label_texts=uv_wrap_labels,
-                                     data_masks=[True] * len(gcmf_texture.uv_wrap),
-                                     property='uv_wrap', label_text='UV WRAP')
-                    # unk0x06
-                    box.label(text=MSG_LABEL_EDIT.format(NAME_GXMDLVIEW_TEX_UNK06))
-                    box.prop(gcmf_texture, "unk0x06", text="value")
-                    # Anisotropy
-                    anisotropy_labels = [
-                        'unknown7', 'unknown6', 'unknown5', 'unknown4',
-                        'unknown3', 'aniso4', 'aniso2', 'aniso1'
-                    ]
-                    draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                     label_texts=anisotropy_labels,
-                                     data_masks=[True] * len(gcmf_texture.anisotropy),
-                                     property='anisotropy', label_text='Anisotropy')
-                    # unk0x0C
-                    draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                        flags=gcmf_texture.unk0x0C,
-                                        property='unk0x0C', label_text=NAME_GXMDLVIEW_TEX_UNK0C)
-                    # is Swappable
-                    draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                        flags=gcmf_texture.is_swappable,
-                                        property='is_swappable', label_text='is Swappable (0x0D)')
-                    # unk0x10
-                    draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
-                                        flags=gcmf_texture.unk0x10,
-                                        property='unk0x10', label_text=NAME_GXMDLVIEW_TEX_UNK10)
+#             if len(gcmf_texture_nodes) == 0:
+#                 self.layout.label(text=MSG_NOT_FOUND_TEXTURE)
+#                 return
 
-        except Exception as e:
-            self.layout.label(text=f"Error occurred: {e}")
+#             show_property_keys = [
+#                 'unk0x00', 'mipmap', 'uv_wrap', 'anisotropy',
+#                 'unk0x0C', 'is_swappable', 'unk0x10'
+#             ]
+#             for idx, gcmf_texture in enumerate(gcmf_texture_nodes):
+#                 is_open = gcmf_texture.show_gcmf_textures_edit
+#                 self.layout.prop(gcmf_texture, "show_gcmf_textures_edit", index=1,
+#                                  icon='TRIA_DOWN' if is_open else 'TRIA_RIGHT',
+#                                  emboss=False,
+#                                  text=f"Edit GCMF Texture [{idx}]")
+#                 if is_open:
+#                     box = self.layout.box()
+#                     # image
+#                     box.template_ID(gcmf_texture, "image", open="image.open")
+#                     # texture_index
+#                     box.label(text=NAME_GXMDLVIEW_TEX_TPL_IDX)
+#                     box.prop(gcmf_texture, "texture_index", text="value")
+#                     # unk0x00
+#                     unk0x00_labels = [''] * len(gcmf_texture.unk0x00)
+#                     unk0x00_labels[10] = 'Enable carcmntex.tpl Texture (F-ZERO GX)'
+#                     unk0x00_labels[11] = 'Enable normal reflection'
+#                     unk0x00_labels_mask = [False] * len(gcmf_texture.unk0x00)
+#                     unk0x00_labels_mask[10] = True
+#                     unk0x00_labels_mask[11] = True
+#                     draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                      label_texts=unk0x00_labels, data_masks=unk0x00_labels_mask,
+#                                      property='unk0x00', label_text='unk0x00')
+#                     # mipmap
+#                     mip_map_labels = [
+#                         'unknown7', 'unknown6', 'unknown5', 'unknown4',
+#                         'near', 'unknown2', 'unknown1', 'enable'
+#                     ]
+#                     draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                      label_texts=mip_map_labels,
+#                                      data_masks=[True] * len(gcmf_texture.mipmap),
+#                                      property='mipmap', label_text='MIPMAP')
+#                     # uv_wrap
+#                     uv_wrap_labels = [
+#                         'unknown7', 'unknown6', 'Y-Mirror', 'Y-Repeat',
+#                         'X-Mirror', 'X-Repeat', 'unknown1', 'unknown0'
+#                     ]
+#                     draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                      label_texts=uv_wrap_labels,
+#                                      data_masks=[True] * len(gcmf_texture.uv_wrap),
+#                                      property='uv_wrap', label_text='UV WRAP')
+#                     # unk0x06
+#                     box.label(text=MSG_LABEL_EDIT.format(NAME_GXMDLVIEW_TEX_UNK06))
+#                     box.prop(gcmf_texture, "unk0x06", text="value")
+#                     # Anisotropy
+#                     anisotropy_labels = [
+#                         'unknown7', 'unknown6', 'unknown5', 'unknown4',
+#                         'unknown3', 'aniso4', 'aniso2', 'aniso1'
+#                     ]
+#                     draw_checkbox_row(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                      label_texts=anisotropy_labels,
+#                                      data_masks=[True] * len(gcmf_texture.anisotropy),
+#                                      property='anisotropy', label_text='Anisotropy')
+#                     # unk0x0C
+#                     draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                         flags=gcmf_texture.unk0x0C,
+#                                         property='unk0x0C', label_text=NAME_GXMDLVIEW_TEX_UNK0C)
+#                     # is Swappable
+#                     draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                         flags=gcmf_texture.is_swappable,
+#                                         property='is_swappable', label_text='is Swappable (0x0D)')
+#                     # unk0x10
+#                     draw_checkbox_column(box, gcmf_texture, gcmf_texture.show_propertys, show_property_keys,
+#                                         flags=gcmf_texture.unk0x10,
+#                                         property='unk0x10', label_text=NAME_GXMDLVIEW_TEX_UNK10)
+
+        # except Exception as e:
+        #     self.layout.label(text=f"Error occurred: {e}")

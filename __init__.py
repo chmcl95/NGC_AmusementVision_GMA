@@ -139,7 +139,7 @@ classes = (
     gcmf_editor.OBJECT_PT_GCMF_Material_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Material_Editor,
     gcmf_editor.OBJECT_PT_GCMF_Texture_Viewer,
-    gcmf_editor.OBJECT_PT_GCMF_Texture_Editor,
+    # gcmf_editor.OBJECT_PT_GCMF_Texture_Editor,
 )
 
 
