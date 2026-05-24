@@ -4,10 +4,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@blender_4_x
-#    - uses: actions/checkout@master
+    - uses: actions/checkout@master
       with:
-        submodules: false
+        ref: blender_4_x
+        
     - name: Create "io_scene_avision_gma ZIP"
       uses: thedoctor0/zip-release@0.7.5
       with:
