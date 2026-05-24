@@ -17,5 +17,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: TEST release
+        name: io_scene_avision_gma
         path: .
