@@ -1,0 +1,21 @@
+name: IO Scene AmusementVision GMA Release
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@blender_4_x
+#    - uses: actions/checkout@master
+      with:
+        submodules: false
+    - name: Create "io_scene_avision_gma ZIP"
+      uses: thedoctor0/zip-release@0.7.5
+      with:
+        type: 'zip'
+        filename: 'io_scene_avision_gma.zip'
+        exclusions: '*.git* .readme.md memo.md import_gml.py gml.py'
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: TEST release
+        path: .
