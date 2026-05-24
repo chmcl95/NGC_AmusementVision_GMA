@@ -5,8 +5,7 @@ import mathutils
 import numpy
 
 from .gma import Gma
-from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap
-from .gml import Gml
+from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material
 from .gcmf_node import GCMFTextureNode, _ensure_nodegroup
 
 # Messages
@@ -67,18 +66,9 @@ def _get_or_create_image(images: dict, name: str) -> bpy.types.Image:
 # ---------------------------------------------------------------------------
 # Generate Blender Material  (カスタムノード版)
 # ---------------------------------------------------------------------------
-def generate_material(material, mat_idx: int, gcmf_texs_data: list,
+def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list,
                       images: dict, is_alpha: bool) -> bpy.types.Material:
-    """
-    2.79版の generate_texture() + texture_slots 設定に相当する処理を
-    GCMFTextureNode として再現する。
 
-    2.79版との対応:
-      bpy.data.textures.new(...)   →  node_tree.nodes.new('GCMFTextureNode')
-      tex.image = ...              →  gcmf_node.image = img
-      tex.gcmf_texture.*  = ...   →  gcmf_node.* = ...
-      mat.texture_slots[i] = tex  →  links.new(gcmf_node → bsdf)
-    """
     mat = bpy.data.materials.new(name=NAME_MATERIAL.format(mat_idx))
     mat.use_nodes = True
 
@@ -98,7 +88,7 @@ def generate_material(material, mat_idx: int, gcmf_texs_data: list,
         material.vtx_descriptor.pack(), gcmf_material.vtx_descriptor)
     gcmf_material.order_index    = mat_idx
 
-    # ---- ノードツリー初期化 ----
+    # ---- Initialize Node Tree ----
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
     nodes.clear()
@@ -120,9 +110,7 @@ def generate_material(material, mat_idx: int, gcmf_texs_data: list,
     if is_alpha or material.transparency < 0xFF:
         mat.blend_method = 'BLEND'
 
-    # ---- GCMFTextureNode を生成してデータを移植 ----
-    # 2.79版: for i, texid in enumerate(material.texture_indexs):
-    #             tex = bpy.data.textures.new(...); mat.texture_slots[i] = tex
+    # ---- Generate GCMFTextureNode ----
     tex_x = -400
     first_gcmf_node = None
 
@@ -133,12 +121,12 @@ def generate_material(material, mat_idx: int, gcmf_texs_data: list,
         if raw_tex is None:
             continue
 
-        # --- GCMFTextureNode を生成 (2.79版 bpy.data.textures.new() 相当) ---
+        # --- Generate GCMFTextureNode ---
         gcmf_node = nodes.new('GCMFTextureNode')
         gcmf_node.location  = (tex_x, 300 - i * 320)
         gcmf_node.label     = f'GCMF Tex [{i}]'
 
-        # --- メタデータを移植 (2.79版 tex.gcmf_texture.* = ... 相当) ---
+        # --- save as Properties ---
         gcmf_node.unk0x00       = convert_value2flags(raw_tex.unk0x00,    gcmf_node.unk0x00)
         gcmf_node.mipmap        = convert_value2flags(raw_tex.mipmap,     gcmf_node.mipmap)
         gcmf_node.uv_wrap       = convert_value2flags(raw_tex.uv_wrap,    gcmf_node.uv_wrap)
@@ -171,8 +159,6 @@ def generate_material(material, mat_idx: int, gcmf_texs_data: list,
         # 2枚目以降はノードを配置するが接続はユーザーに委ねる
         # （接続したい場合は gcmf_node.outputs['Color'] → MixRGB などへ）
 
-        tex_x -= 300
-
     return mat
 
 
@@ -196,7 +182,7 @@ def generate_vertexcolor(mesh, color_name, vcolors):
 
 
 # ---------------------------------------------------------------------------
-# Mesh generation (変更なし)
+# Mesh generation
 # ---------------------------------------------------------------------------
 def generate_mesh(mesh, bm, matid, mesh_data, dlist, mtxidxs, mtxs, first_iscw):
     v0 = mathutils.Vector((0, 0, 0))
@@ -287,6 +273,7 @@ def load(filepath, little_endian=False):
 
             obj.gcmf_object.index     = i
             obj.gcmf_object.attribute = generate_attribute(gcmf.attribute)
+            obj.gcmf_object.transparent_count = gcmf.transparent_count
 
             total_flags = numpy.array(0x00, dtype='i4')
             gcmf_texs_data = gcmf.textures

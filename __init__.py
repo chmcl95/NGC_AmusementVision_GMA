@@ -130,16 +130,12 @@ classes = (
     gcmf_node.GCMFTextureNode,
     gcmf_setting.GCMF_ObjectSetting,
     gcmf_setting.GCMF_MaterialSetting,
-    # Operator
-    # gcmf_editor.GCMF_OT_Add_GCMFTexture,
-    # gcmf_editor.GCMF_OT_Remove_GCMFTexture,
     #Panel
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Object_Editor,
     gcmf_editor.OBJECT_PT_GCMF_Material_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Material_Editor,
     gcmf_editor.OBJECT_PT_GCMF_Texture_Viewer,
-    # gcmf_editor.OBJECT_PT_GCMF_Texture_Editor,
 )
 
 

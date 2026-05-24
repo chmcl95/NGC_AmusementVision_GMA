@@ -1,32 +1,11 @@
 """
 gcmf_node.py  –  GCMFTextureNode (ShaderNodeCustomGroup)
-
-2.79版の bpy.types.Texture + gcmf_texture PropertyGroup を
-Blender 4.2 のカスタムノードとして再現する。
-
-データ配置の対応:
-  2.79                               4.2
-  ─────────────────────────────────────────────────────
-  bpy.data.textures["gxtex_000"]  →  GCMFTextureNode インスタンス
-    .image                        →    .image        (PointerProperty)
-    .gcmf_texture.uv_wrap         →    .uv_wrap      (ノード自身のプロパティ)
-    .gcmf_texture.texture_index   →    .texture_index
-    ... (全フィールド同様)
-  material.texture_slots[i]       →  ノードツリー上のリンク接続
 """
 
 import bpy
 import re
+from .ui import draw_checkbox_row, draw_checkbox_column
 
-# ---------------------------------------------------------------------------
-# 内部 NodeGroup の名前
-# ---------------------------------------------------------------------------
-_NODEGROUP_NAME = ".GCMFTextureNodeGroup"   # 先頭 . でアセットブラウザから非表示
-
-NAME_GXMDLVIEW_OBJ_BOUND_SPHERE = 'Bounding Spher Center (X, Y, Z)'
-NAME_GXMDLVIEW_OBJ_UNK3C = 'Unknown (0x3C)'
-NAME_GXMDLVIEW_OBJ_UNK40 = 'Unknown (0x40)'
-NAME_GXMDLVIEW_TEX_MAT_FLAG = 'Material Flags (0x00)'
 NAME_GXMDLVIEW_TEX_TPL_IDX = 'TPL / Texture Index (0x04)'
 NAME_GXMDLVIEW_TEX_UNK06 = 'Unknown (0x06)'
 NAME_GXMDLVIEW_TEX_ANISO = 'Anisotropy Level (0x07)'
@@ -35,30 +14,10 @@ NAME_GXMDLVIEW_TEX_UNK10 = 'Unknown (0x10)'
 
 MSG_LABEL_EDIT = '{0}:'
 
-
-def draw_checkbox_row(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], show_property_keys: list[str], label_texts: list[str], data_masks: list[bool], property :str, label_text: str):
-    """Convert a list of boolean flags to a column of checkboxes with labels."""
-    idx = show_property_keys.index(property)
-    show_property = show_propertys[idx]
-    box.prop(data, 'show_propertys', index=idx, text=label_text, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
-    if show_property:
-        _checkbox = box.box()
-        for i, _label_text in enumerate(label_texts):
-            if not data_masks[i]:
-                continue
-            row = _checkbox.row()
-            row.prop(data, property, index=i, text=_label_text)
-
-def draw_checkbox_column(box: bpy.types.UILayout, data: bpy.types.AnyType, show_propertys: list[bool], show_property_keys: list[str], flags: list[bool], property :str, label_text: str):
-    idx = show_property_keys.index(property)
-    show_property = show_propertys[idx]
-    box.prop(data, 'show_propertys', index=idx, text=label_text, icon='TRIA_DOWN' if show_property else 'TRIA_RIGHT', emboss=False)
-    if show_property:
-        _checkbox = box.box()
-        length= len(flags)
-        col = _checkbox.column_flow(columns=length)
-        for i in range(length):
-            col.prop(data, property, index=i, text='')
+# ---------------------------------------------------------------------------
+# 内部 NodeGroup の名前
+# ---------------------------------------------------------------------------
+_NODEGROUP_NAME = ".GCMFTextureNodeGroup"
 
 # ---------------------------------------------------------------------------
 # 内部 NodeGroup の生成・取得
@@ -77,7 +36,7 @@ def _ensure_nodegroup() -> bpy.types.NodeGroup:
 
     group = bpy.data.node_groups.new(_NODEGROUP_NAME, 'ShaderNodeTree')
 
-    # 出力ソケット定義 (Blender 4.x API)
+    # Output Sockets
     group.interface.new_socket('Color', in_out='OUTPUT', socket_type='NodeSocketColor')
     group.interface.new_socket('Alpha', in_out='OUTPUT', socket_type='NodeSocketFloat')
 
@@ -98,15 +57,10 @@ def _ensure_nodegroup() -> bpy.types.NodeGroup:
 
 
 # ---------------------------------------------------------------------------
-# カスタムノードクラス
+# Custom Node
 # ---------------------------------------------------------------------------
 
 class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
-    """
-    GCMF Texture ノード。
-    2.79版の bpy.data.textures 要素に相当するデータをノード自身に保持する。
-    """
-
     bl_name  = 'GCMFTextureNode'
     bl_label = 'GCMF Texture'
     bl_icon  = 'TEXTURE'
@@ -172,10 +126,6 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
     show_gcmf_textures_edit: bpy.props.BoolProperty(name="Textures Edit", default=False)
 
 
-    # ------------------------------------------------------------------
-    # ライフサイクル
-    # ------------------------------------------------------------------
-
     def init(self, context):
         """ノード新規作成時に内部 NodeGroup をアタッチする。"""
         self.node_tree = _ensure_nodegroup()
@@ -192,11 +142,9 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
         pass
 
     # ------------------------------------------------------------------
-    # 内部 ShaderNodeTexImage への image 同期
+    # Sync ShaderNodeTexImage and self.image
     # ------------------------------------------------------------------
-
     def _sync_image(self):
-        """self.image を内部 NodeGroup の ShaderNodeTexImage に反映する。"""
         if self.node_tree is None:
             return
         tex_node = self.node_tree.nodes.get('Image')
@@ -204,9 +152,8 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
             tex_node.image = self.image
 
     # ------------------------------------------------------------------
-    # ノード上の UI
+    # Node UI
     # ------------------------------------------------------------------
-
     def draw_buttons(self, context, layout):
         # 画像選択
         layout.template_ID(self, "image", open="image.open")
@@ -215,7 +162,7 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
         layout.prop(self, "texture_index")
 
     def draw_buttons_ext(self, context, layout):
-        """サイドバー（N パネル）に詳細を表示。"""
+        """ side bar appears when press the N-key"""
         self.draw_buttons(context, layout)
         layout.prop(self, "order_index")
 
@@ -262,7 +209,7 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
             'unknown3', 'aniso4', 'aniso2', 'aniso1'
         ]
         anisotropy_mask = [True,] * len(self.anisotropy)
-        draw_checkbox_row(box, self, self.show_propertys, show_property_keys, label_texts=anisotropy_labels, data_masks=anisotropy_mask, property='anisotropy', label_text='Anisotropy')
+        draw_checkbox_row(box, self, self.show_propertys, show_property_keys, label_texts=anisotropy_labels, data_masks=anisotropy_mask, property='anisotropy', label_text=NAME_GXMDLVIEW_TEX_ANISO)
         # unk0x0C
         draw_checkbox_column(box, self, self.show_propertys, show_property_keys, flags=self.unk0x0C, property='unk0x0C', label_text=NAME_GXMDLVIEW_TEX_UNK0C)
         # is Swappable
@@ -271,51 +218,29 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
         draw_checkbox_column(box, self, self.show_propertys, show_property_keys, flags=self.unk0x10, property='unk0x10', label_text=NAME_GXMDLVIEW_TEX_UNK10)
 
 # ---------------------------------------------------------------------------
-# ヘルパー: マテリアルから GCMFTextureNode を順番通りに収集
+# Helper Function: Collect GCMFTextureNode in order from material's node tree
 # ---------------------------------------------------------------------------
 
-def collect_gcmf_texture_nodes(mat: bpy.types.Material) -> list:
+def collect_gcmf_texture_nodes(mat: bpy.types.Material) -> list[GCMFTextureNode]:
     """
-    ノードツリーから GCMFTextureNode を最大3つ収集して返す。
-    order_index が設定されていればそれでソート、未設定は接続順。
-
-    Returns:
-        list[GCMFTextureNode]  (最大3要素)
+    Collect GCMFTextureNode from the material's node tree.
+    Max 3 GCMFTextureNode are returned.
     """
     if not mat.use_nodes or mat.node_tree is None:
         return []
 
     nodes = [n for n in mat.node_tree.nodes if n.bl_idname == 'GCMFTextureNode']
 
-    # order_index が -1（未設定）のノードはリスト末尾に置く
-    # nodes.sort(key=lambda n: n.order_index if n.order_index >= 0 else 0x7FFF)
     nodes.sort(key=lambda n: n.order_index)
 
     return nodes[:3]
 
 
 # ---------------------------------------------------------------------------
-# ヘルパー: texture_index を image.name から逆算
+# Adding to Add Menu on Node Editor
+# Add -> Texture -> GCMF Texture
 # ---------------------------------------------------------------------------
-
-def resolve_texture_index_from_image(node: GCMFTextureNode) -> int:
-    """
-    node.image.name 末尾の数字から texture_index を逆算する。
-    例: "tpl_005" → 5、"tpl_common_012" → 12
-    取得できない場合は node.texture_index の保存値を返す。
-    """
-    if node.image is None:
-        return node.texture_index
-    m = re.search(r'(\d+)$', node.image.name)
-    return int(m.group(1)) if m else node.texture_index
-
-
-# ---------------------------------------------------------------------------
-# ノードエディタの Add メニューへの登録
-# ---------------------------------------------------------------------------
-
 def _add_node_menu(self, context):
-    """NODE_MT_add に 'GCMF Texture' エントリを追加する。"""
     if context.space_data.tree_type == 'ShaderNodeTree':
         self.layout.separator()
         self.layout.operator(

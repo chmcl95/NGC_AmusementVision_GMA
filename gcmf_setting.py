@@ -13,7 +13,7 @@ class GCMF_ObjectSetting(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty(name="gcmf order index", default=0x00, min=-0x7FFF, max=0x7FFF)
     attribute: bpy.props.EnumProperty(items=gcmf_attribute_enum, default="default")
 
-    transparent_material_count: bpy.props.IntProperty(name="transparent_material_count", default=0, min=0)
+    transparent_count: bpy.props.IntProperty(name="transparent_material_count", default=0, min=0, max=0x7FFF)
 
 # GCMF Material Property
 class GCMF_MaterialSetting(bpy.types.PropertyGroup):

@@ -10,7 +10,7 @@ from .gcmf import Gcmf, Attribute, \
     Submesh, Material, \
     VertexAttribute, VertexRenderFlag, DisplatListHeader, \
     DisplayList, Vertex, Strip
-from .gcmf_node import GCMFTextureNode, collect_gcmf_texture_nodes, resolve_texture_index_from_image
+from .gcmf_node import GCMFTextureNode, collect_gcmf_texture_nodes
 
 # Messages
 MSG_INFO_INIT    = '---- {0} ----'
@@ -43,7 +43,7 @@ def generate_texture(gcmf_texture_node: GCMFTextureNode, idx: int) -> Texture:
     texture.mipmap        = convert_flags2value(gcmf_texture_node.mipmap)
     texture.uv_wrap       = convert_flags2value(gcmf_texture_node.uv_wrap)
     # image.name から texture_index を逆算（手動設定値をフォールバックに使用）
-    texture.texture_index = resolve_texture_index_from_image(gcmf_texture_node)
+    texture.texture_index = gcmf_texture_node.texture_index
     texture.unk0x06       = gcmf_texture_node.unk0x06
     texture.anisotropy    = convert_flags2value(gcmf_texture_node.anisotropy)
     texture.unk0x0C       = convert_flags2value(gcmf_texture_node.unk0x0C)
@@ -221,20 +221,11 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
 
     curr_idx      = 0
     gcmf_textures = []
-    transparent_count = 0
 
     for mat_slot in obj.material_slots:
         bl_mat = mat_slot.material
         if bl_mat is None:
             continue
-
-        # 透過判定
-        is_transparent = (
-            (hasattr(bl_mat, 'blend_method') and bl_mat.blend_method in ('BLEND','HASHED','CLIP'))
-            or bl_mat.gcmf_material.transparency < 0xFF
-        )
-        if is_transparent:
-            transparent_count += 1
 
         # GCMFTextureNode をノードツリーから収集してテクスチャ構造体を生成
         # 2.79版: for i, bl_tex in enumerate(mat.texture_slots): generate_texture(tex, ...)
@@ -275,6 +266,7 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
 
     gcmf.mtx_idxs         = [-1] * 8
     gcmf.texture_count    = len(gcmf.textures)
+    transparent_count = obj.gcmf_object.transparent_count
     gcmf.opaque_count     = len(obj.material_slots) - transparent_count
     gcmf.transparent_count= transparent_count
 
