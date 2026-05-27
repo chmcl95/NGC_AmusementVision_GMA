@@ -11,8 +11,8 @@ from . import gcmf_node
 
 bl_info = {
     "name": "Amusement Vision GMA format",
-    "author": "CH-MCL",
-    "version": (0, 5, 999, 0),
+    "author": "chmcl95",
+    "version": (1, 0, 420, 0),
     "blender": (4, 2, 0),
     "location": "File > Import-Export > Amusement Vision Model (.gma)",
     "description": "Imports a Amusement Vision 3d model.",
