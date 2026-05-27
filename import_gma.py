@@ -6,7 +6,7 @@ import numpy
 
 from .gma import Gma
 from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material
-from .gcmf_node import GCMFTextureNode, _ensure_nodegroup
+from .gcmf_node import GCMFTextureNode
 
 # Messages
 MSG_INFO_INIT = '---- {0} ----'
@@ -247,7 +247,6 @@ def generate_attribute(attribute):
 # ---------------------------------------------------------------------------
 def load(filepath, little_endian=False):
     # NodeGroup を事前に準備
-    _ensure_nodegroup()
 
     with open(filepath, 'rb') as file:
         sel_endian = '<' if little_endian else '>'

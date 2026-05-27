@@ -14,27 +14,23 @@ NAME_GXMDLVIEW_TEX_UNK10 = 'Unknown (0x10)'
 
 MSG_LABEL_EDIT = '{0}:'
 
-# ---------------------------------------------------------------------------
-# 内部 NodeGroup の名前
-# ---------------------------------------------------------------------------
-_NODEGROUP_NAME = ".GCMFTextureNodeGroup"
 
 # ---------------------------------------------------------------------------
-# 内部 NodeGroup の生成・取得
+# 内部 NodeGroup の生成（インスタンスごとに個別生成）
 # ---------------------------------------------------------------------------
 
-def _ensure_nodegroup() -> bpy.types.NodeGroup:
+def _create_nodegroup() -> bpy.types.NodeGroup:
     """
-    GCMFTextureNode が内部で使う ShaderNodeTree を生成/再利用する。
-    ノード構成:
-        [NodeGroupInput(なし)] → ShaderNodeTexImage → [NodeGroupOutput]
-                                                           Color (NodeSocketColor)
-                                                           Alpha (NodeSocketFloat)
-    """
-    if _NODEGROUP_NAME in bpy.data.node_groups:
-        return bpy.data.node_groups[_NODEGROUP_NAME]
+    GCMFTextureNode インスタンスごとの専用 ShaderNodeTree を新規作成する。
 
-    group = bpy.data.node_groups.new(_NODEGROUP_NAME, 'ShaderNodeTree')
+    【共有グループを使わない理由】
+    ShaderNodeCustomGroup の node_tree を複数インスタンスで共有すると、
+    内部の ShaderNodeTexImage も共有されるため、どのノードも同じ画像しか
+    参照できず、ユーザーが個別に画像を指定してもレンダリングに反映されない。
+    インスタンスごとに個別の NodeGroup を持つことで、
+    それぞれ独立した ShaderNodeTexImage を保持できる。
+    """
+    group = bpy.data.node_groups.new(".GCMFTextureNodeGroup", 'ShaderNodeTree')
 
     # Output Sockets
     group.interface.new_socket('Color', in_out='OUTPUT', socket_type='NodeSocketColor')
@@ -57,6 +53,18 @@ def _ensure_nodegroup() -> bpy.types.NodeGroup:
 
 
 # ---------------------------------------------------------------------------
+# image 変更時に内部 ShaderNodeTexImage へ自動同期するコールバック
+# ---------------------------------------------------------------------------
+
+def _on_image_update(self, context):
+    """
+    self.image が変更されるたびに呼ばれる update コールバック。
+    インスタンス固有の node_tree 内の ShaderNodeTexImage に画像を反映する。
+    """
+    self._sync_image()
+
+
+# ---------------------------------------------------------------------------
 # Custom Node
 # ---------------------------------------------------------------------------
 
@@ -67,10 +75,12 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
     bl_description = "GCMF Texture – holds image and GCMF metadata (uv_wrap, mipmap, etc.)"
 
     # ---- Image ----
+    # update コールバックで内部 ShaderNodeTexImage に自動同期する
     image: bpy.props.PointerProperty(
         name="Image",
         type=bpy.types.Image,
         description="Texture image",
+        update=_on_image_update,
     )
 
     # ---- GCMF Texture Properties ----
@@ -121,30 +131,45 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
     show_propertys: bpy.props.BoolVectorProperty(
         name="Edit Boxs", default=(False, ) * 7, size=7,
     )
-    # sub box
     show_gcmf_textures: bpy.props.BoolProperty(name="Textures", default=False)
     show_gcmf_textures_edit: bpy.props.BoolProperty(name="Textures Edit", default=False)
 
 
     def init(self, context):
-        """ノード新規作成時に内部 NodeGroup をアタッチする。"""
-        self.node_tree = _ensure_nodegroup()
+        """
+        ノード新規作成時にインスタンス固有の NodeGroup を生成してアタッチする。
+        共有グループを使わないことで、各インスタンスが独立した
+        ShaderNodeTexImage を持ち、画像を個別に設定できる。
+        """
+        self.node_tree = _create_nodegroup()
 
     def copy(self, node):
-        """ノード複製時も同じ NodeGroup を参照する（共有）。"""
-        self.node_tree = _ensure_nodegroup()
+        """
+        ノード複製時も新しい NodeGroup を生成する。
+        複製元と node_tree を共有しないことで画像の独立性を保つ。
+        """
+        self.node_tree = _create_nodegroup()
+        # 複製元の画像を引き継ぐ
+        if node.image:
+            self.image = node.image
+            self._sync_image()
 
     def free(self):
         """
-        ノード削除時。NodeGroup は共有リソースなので削除しない。
-        Blender がゼロ参照になれば自動削除する。
+        ノード削除時にインスタンス固有の NodeGroup も削除する。
+        共有リソースではないため、ここで明示的に削除する。
         """
-        pass
+        if self.node_tree:
+            bpy.data.node_groups.remove(self.node_tree, do_unlink=True)
 
     # ------------------------------------------------------------------
-    # Sync ShaderNodeTexImage and self.image
+    # Sync self.image → 内部 ShaderNodeTexImage
     # ------------------------------------------------------------------
     def _sync_image(self):
+        """
+        self.image を内部 NodeGroup の ShaderNodeTexImage に反映する。
+        init()/copy() 時や update コールバックから呼ばれる。
+        """
         if self.node_tree is None:
             return
         tex_node = self.node_tree.nodes.get('Image')
@@ -155,10 +180,7 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
     # Node UI
     # ------------------------------------------------------------------
     def draw_buttons(self, context, layout):
-        # 画像選択
         layout.template_ID(self, "image", open="image.open")
-
-        # texture_index
         layout.prop(self, "texture_index")
 
     def draw_buttons_ext(self, context, layout):
@@ -217,28 +239,21 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
         # unk0x10
         draw_checkbox_column(box, self, self.show_propertys, show_property_keys, flags=self.unk0x10, property='unk0x10', label_text=NAME_GXMDLVIEW_TEX_UNK10)
 
+
 # ---------------------------------------------------------------------------
-# Helper Function: Collect GCMFTextureNode in order from material's node tree
+# Helper: Collect GCMFTextureNode in order from material's node tree
 # ---------------------------------------------------------------------------
 
 def collect_gcmf_texture_nodes(mat: bpy.types.Material) -> list[GCMFTextureNode]:
-    """
-    Collect GCMFTextureNode from the material's node tree.
-    Max 3 GCMFTextureNode are returned.
-    """
     if not mat.use_nodes or mat.node_tree is None:
         return []
-
     nodes = [n for n in mat.node_tree.nodes if n.bl_idname == 'GCMFTextureNode']
-
     nodes.sort(key=lambda n: n.order_index)
-
     return nodes[:3]
 
 
 # ---------------------------------------------------------------------------
 # Adding to Add Menu on Node Editor
-# Add -> Texture -> GCMF Texture
 # ---------------------------------------------------------------------------
 def _add_node_menu(self, context):
     if context.space_data.tree_type == 'ShaderNodeTree':
