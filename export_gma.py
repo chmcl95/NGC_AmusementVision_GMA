@@ -38,7 +38,7 @@ def generate_texture(gcmf_texture_node: GCMFTextureNode, idx: int) -> Texture:
     GCMFTextureNode のプロパティを直接参照する。
     """
     texture = Texture()
-    texture.index         = idx if gcmf_texture_node.order_index < 0 else gcmf_texture_node.order_index
+    texture.index         = idx
     texture.unk0x00       = convert_flags2value(gcmf_texture_node.unk0x00)
     texture.mipmap        = convert_flags2value(gcmf_texture_node.mipmap)
     texture.uv_wrap       = convert_flags2value(gcmf_texture_node.uv_wrap)
@@ -80,8 +80,8 @@ def generate_vat(bl_mat: bpy.types.Material, bm: bmesh.types.BMesh) -> VertexAtt
 # ---------------------------------------------------------------------------
 # Material
 # ---------------------------------------------------------------------------
-def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material,
-                     tex_idx: int) -> Material:
+def generate_material(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material,
+                     all_gcmf_mat_nodes: list[GCMFTextureNode]) -> Material:
     material  = Material()
     vtx_attr  = generate_vat(bl_mat, bm)
     vtx_render = VertexRenderFlag()
@@ -98,7 +98,7 @@ def generate_matrial(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material,
 
     texture_indexs = [-1, -1, -1]
     for i in range(tex_count):
-        texture_indexs[i] = tex_idx + i
+        texture_indexs[i] = all_gcmf_mat_nodes.index(gcmf_nodes[i])
 
     val = sum(int(b) << (7 - i) for i, b in enumerate(gcmf_mat.unk0x02))
     material.unk0x02 = val
@@ -153,7 +153,7 @@ def generate_vertex(bm_vtx, loop, bl_loops, bm, gcmf_nodes, obj) -> Vertex:
     return vtx
 
 
-def generate_strip(bm, face, bl_loops, gcmf_nodes, obj, attribute) -> Strip:
+def generate_strip(bm, face, bl_loops, gcmf_nodes, obj, attribute: Attribute) -> Strip:
     strip = Strip()
     strip.cmd = 0x99 if attribute.is_16bit else 0x98
     strip.vertexs = [
@@ -164,7 +164,7 @@ def generate_strip(bm, face, bl_loops, gcmf_nodes, obj, attribute) -> Strip:
     return strip
 
 
-def generate_displaylist(bm, mat_idx, bl_loops, gcmf_nodes, obj, attribute) -> DisplayList:
+def generate_displaylist(bm, mat_idx, bl_loops, gcmf_nodes, obj, attribute: Attribute) -> DisplayList:
     dlist = DisplayList()
     for face in bm.faces:
         if face.material_index == mat_idx:
@@ -180,13 +180,13 @@ def generate_displaylistheader() -> DisplatListHeader:
     return h
 
 
-def generate_submesh(attribute, bm, obj, bl_mat, tex_idx, mat_idx, bl_loops) -> Submesh:
+def generate_submesh(attribute, bm, obj, bl_mat, all_gcmf_mat_nodes, mat_idx, bl_loops) -> Submesh:
     submesh = Submesh()
     submesh.dlist_headers = [generate_displaylistheader()]
 
     gcmf_nodes = collect_gcmf_texture_nodes(bl_mat)
 
-    submesh.material = generate_matrial(bm, bl_mat, tex_idx)
+    submesh.material = generate_material(bm, bl_mat, all_gcmf_mat_nodes)
     submesh.boundingsphere_origin = bl_mat.gcmf_material.boundingsphere_origin
     submesh.unk0x3C = bl_mat.gcmf_material.unk0x3C
     val = sum(int(b) << (31 - i) for i, b in enumerate(bl_mat.gcmf_material.unk0x40))
@@ -220,6 +220,7 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     gcmf.boundspher_radius= max(obj.dimensions)
 
     curr_idx      = 0
+    all_gcmf_mat_nodes = []
     gcmf_textures = []
 
     for mat_slot in obj.material_slots:
@@ -228,15 +229,18 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
             continue
 
         # GCMFTextureNode をノードツリーから収集してテクスチャ構造体を生成
-        # 2.79版: for i, bl_tex in enumerate(mat.texture_slots): generate_texture(tex, ...)
-        gcmf_nodes = collect_gcmf_texture_nodes(bl_mat)
-        for i, gcmf_node in enumerate(gcmf_nodes):
+        gcmf_mat_nodes = collect_gcmf_texture_nodes(bl_mat)
+        for i, gcmf_mat_node in enumerate(gcmf_mat_nodes):
             if i >= 3:
                 print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
                 break
-            texture = generate_texture(gcmf_node, curr_idx)
-            gcmf_textures.append(texture)
-            curr_idx += 1
+            all_gcmf_mat_nodes.append(gcmf_mat_node)
+
+    all_gcmf_mat_nodes.sort(key=lambda n: n.order_index)
+    for gcmf_mat_node in all_gcmf_mat_nodes:
+        texture = generate_texture(gcmf_mat_node, curr_idx)
+        gcmf_textures.append(texture)
+        curr_idx += 1
 
     gcmf.textures = sorted(gcmf_textures, key=lambda t: t.index)
 
@@ -256,13 +260,11 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
         bl_mesh.use_auto_smooth = True
     bl_loops = bl_mesh.loops
 
-    tex_idx = 0
     for mat_idx, mat_slot in enumerate(obj.material_slots):
         submesh = generate_submesh(
             gcmf.attribute, bm, obj, mat_slot.material,
-            tex_idx, mat_idx, bl_loops)
+            all_gcmf_mat_nodes, mat_idx, bl_loops)
         gcmf.submeshs.append(submesh)
-        tex_idx += submesh.material.material_count
 
     gcmf.mtx_idxs         = [-1] * 8
     gcmf.texture_count    = len(gcmf.textures)

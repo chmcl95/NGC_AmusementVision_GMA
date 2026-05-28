@@ -158,7 +158,7 @@ class OBJECT_PT_GCMF_Material_Viewer(bpy.types.Panel):
             vtx_descriptor_mask[20] = True
 #            vtx_descriptor_mask[21] = True
 #            vtx_descriptor_mask[22] = True
-            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, label_texts=vtx_descriptor_label, data_masks=vtx_descriptor_mask, property='vtx_descriptor', label_text='Export Arritube')
+            draw_checkbox_row(self.layout, gcmf_material, gcmf_material.show_propertys, show_property_keys, label_texts=vtx_descriptor_label, data_masks=vtx_descriptor_mask, property='vtx_descriptor', label_text='Export Attribute')
 
             # These are not "Material"
             # unk0x3C

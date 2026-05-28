@@ -124,7 +124,7 @@ class GCMFTextureNode(bpy.types.ShaderNodeCustomGroup):
     order_index: bpy.props.IntProperty(
         name="Order Index",
         description="GCMF texture order index",
-        default=-1, min=-0x7FFF, max=0x7FFF,
+        default=100, min=-0x7FFF, max=0x7FFF,
     )
 
     # UI
