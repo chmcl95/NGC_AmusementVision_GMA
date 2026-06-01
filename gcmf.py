@@ -15,215 +15,80 @@ CHAR_SET = 'ascii'
 
 #Texture Flags 0x00
 class Texture_Flags0x00:
-    def __init__(self):
-        self.unknown0 = False
-        self.uv_scroll = False
-        self.unknown2 = False
-        self.unknown3 = False
-        #EnvNormal?
-        self.unknown4 = False
-        #Load texture images from another tpl
-        self.commontex = False
-        self.unknown6 = False
-        self.unknown7 = False
-    
-    #Unpack
-    def unpack(self, texture_flag):
-        if texture_flag >> 0x00 & 0x01 == 0x01:
-            self.unknown0 = True
-        if texture_flag >> 0x01 & 0x01 == 0x01:
-            self.uv_scroll = True
-        if texture_flag >> 0x02 & 0x01 == 0x01:
-            self.unknown2 = True
-        if texture_flag >> 0x03 & 0x01 == 0x01:
-            self.unknown3 = True
-        if texture_flag >> 0x04 & 0x01 == 0x01:
-            self.unknown4 = True
-        if texture_flag >> 0x05 & 0x01 == 0x01:
-            self.commontex = True
-        if texture_flag >> 0x06 & 0x01 == 0x01:
-            self.unknown6 = True
-        if texture_flag >> 0x07 & 0x01 == 0x01:
-            self.unknown7 = True
-    
-    #Pack
-    def pack(self, endian):
-        flags = 0x00
-        if self.unknown0 == True:
-            flags = flags + (0x01 << 0x00)
-        if self.uv_scroll == True:
-            flags = flags + (0x01 << 0x01)
-        if self.unknown2 == True:
-            flags = flags + (0x01 << 0x02)
-        if self.unknown3 == True:
-            flags = flags + (0x01 << 0x03)
-        if self.unknown4 == True:
-            flags = flags + (0x01 << 0x04)
-        if self.commontex == True:
-            flags = flags + (0x01 << 0x05)
-        if self.unknown6 == True:
-            flags = flags + (0x01 << 0x06)
-        if self.unknown7 == True:
-            flags = flags + (0x01 << 0x07)
-        return flags
-    
+    UNKNOWN0    = 15 #bit0
+    UV_SCROLL   = 14 #bit1
+    UNKNOWN2    = 13 #bit2
+    UNKNOWN3    = 12 #bit3
+    UNKNOWN4    = 11 #bit4
+    COMMON_TEX  = 10 #bit5
+    UNKNOWN6    = 9  #bit6
+    UNKNOWN7    = 8  #bit7
+    # maybe not works on bit8 ~ 15
+
 
 #Texture Mipmap Settings
 class Texture_Mipmap:
-    def __init__(self):
-        self.enable = False
-        self.unknown1 = False
-        self.unknown2 = False
-        self.near = False
-        self.unknown4 = False
-        self.unknown5 = False
-        self.unknown6 = False
-        self.unknown7 = False
-    
-    #Unpack
-    def unpack(self, texture_flag):
-        if texture_flag >> 0x00 & 0x01 == 0x01:
-            self.enable = True
-        if texture_flag >> 0x01 & 0x01 == 0x01:
-            self.unknown1 = True
-        if texture_flag >> 0x02 & 0x01 == 0x01:
-            self.unknown2 = True
-        if texture_flag >> 0x03 & 0x01 == 0x01:
-            self.near = True
-        if texture_flag >> 0x04 & 0x01 == 0x01:
-            self.unknown4 = True
-        if texture_flag >> 0x05 & 0x01 == 0x01:
-            self.unknown5 = True
-        if texture_flag >> 0x06 & 0x01 == 0x01:
-            self.unknown6 = True
-        if texture_flag >> 0x07 & 0x01 == 0x01:
-            self.unknown7 = True
-    
-    #Pack
-    def pack(self, endian):
-        flags = 0x00
-        if self.enable == True:
-            flags = flags + (0x01 << 0x00)
-        if self.unknown1 == True:
-            flags = flags + (0x01 << 0x01)
-        if self.unknown2 == True:
-            flags = flags + (0x01 << 0x02)
-        if self.near == True:
-            flags = flags + (0x01 << 0x03)
-        if self.unknown4 == True:
-            flags = flags + (0x01 << 0x04)
-        if self.unknown5 == True:
-            flags = flags + (0x01 << 0x05)
-        if self.unknown6 == True:
-            flags = flags + (0x01 << 0x06)
-        if self.unknown7 == True:
-            flags = flags + (0x01 << 0x07)
-        return flags
-    
-    
-#Texture Wrap Flags
+    ENABLE   = 7 # bit0
+    UNKNOWN1 = 6 # bit1
+    UNKNOWN2 = 5 # bit2
+    NEAR     = 4 # bit3
+    UNKNOWN4 = 3 # bit4
+    UNKNOWN5 = 2 # bit5
+    UNKNOWN6 = 1 # bit6
+    UNKNOWN7 = 0 # bit7
+
+
+# #Texture Wrap Flags
 class Texture_Wrap:
-    def __init__(self):
-        self.unknown0 = False
-        self.unknown1 = False
-        self.repeat_x = False
-        self.mirror_x = False
-        self.repeat_y = False
-        self.mirror_y = False
-        self.unknown6 = False
-        self.unknown7 = False
-    
-    #Unpack
-    def unpack(self, texture_flag):
-        if texture_flag >> 0x00 & 0x01 == 0x01:
-            self.unknown0 = True
-        if texture_flag >> 0x01 & 0x01 == 0x01:
-            self.unknown1 = True
-        if texture_flag >> 0x02 & 0x01 == 0x01:
-            self.repeat_x = True
-        if texture_flag >> 0x03 & 0x01 == 0x01:
-            self.mirror_x = True
-        if texture_flag >> 0x04 & 0x01 == 0x01:
-            self.repeat_y = True
-        if texture_flag >> 0x05 & 0x01 == 0x01:
-            self.mirror_y = True
-        if texture_flag >> 0x06 & 0x01 == 0x01:
-            self.unknown6 = True
-        if texture_flag >> 0x07 & 0x01 == 0x01:
-            self.unknown7 = True
-    
-    #Pack
-    def pack(self, endian):
-        flags = 0x00
-        if self.unknown0 == True:
-            flags = flags + (0x01 << 0x00)
-        if self.unknown1 == True:
-            flags = flags + (0x01 << 0x01)
-        if self.repeat_x == True:
-            flags = flags + (0x01 << 0x02)
-        if self.mirror_x == True:
-            flags = flags + (0x01 << 0x03)
-        if self.repeat_y == True:
-            flags = flags + (0x01 << 0x04)
-        if self.mirror_y == True:
-            flags = flags + (0x01 << 0x05)
-        if self.unknown6 == True:
-            flags = flags + (0x01 << 0x06)
-        if self.unknown7 == True:
-            flags = flags + (0x01 << 0x07)
-        return flags
+    UNKNOW0  = 7 # bit0
+    UNKNOW1  = 6 # bit1
+    REPEAT_X = 5 # bit2
+    MIRROR_X = 4 # bit3
+    REPEAT_Y = 3 # bit4
+    MIRROR_Y = 2 # bit5
+    UNKNOW6  = 1 # bit6
+    UNKNOW7  = 0 # bit7
 
 
 #GCMF Texture
 class Texture:
-    fmt = '1h2b1h2b1I1B1b1h1I12x'
-    # 1h  2b   1h  2b   1I  1B  1b  1h  1I  12x
-    # 0,  1-2, 3,  4-5, 6,  7,  8,  9,  10
+    fmt = '1H2B1h2B1I2B1h1I12x'
+    # 1h  2B   1h  2B   1I  2B      1h  1I  12x
+    # 0,  1-2, 3,  4-5, 6,  7 - 8,  9,  10
     
     def __init__(self):
-        self.unk0x00 = Texture_Flags0x00()
-        self.mipmap = Texture_Mipmap()
-        self.uv_wrap = Texture_Wrap()
+        self.unk0x00 = 0x00
+        self.mipmap = 0x00
+        self.uv_wrap = 0x00
         self.texture_index = 0x00
         self.unk0x06 = 0x00
         self.anisotropy = 0x00
         self.unk0x0C = 0x00
-        self.is_swappable = False
+        self.is_swappable = 0x00
         self.index = 0x00
         self.unk0x10 = 0x00 #TEV?
         
-    def unpack(self, file, endian):       
+    def unpack(self, file, endian):
         bytes = file.read(struct.calcsize(self.fmt))
         buff = struct.unpack_from(endian + self.fmt, bytes, 0)
         
-        unk0x00 = buff[0]
-        self.unk0x00.unpack(unk0x00)
-        mipmap = buff[1]
-        self.mipmap.unpack(mipmap)
-        uv_wrap = buff[2]
-        self.uv_wrap.unpack(uv_wrap)
+        self.unk0x00 = buff[0]
+        self.mipmap = buff[1]
+        self.uv_wrap = buff[2]
         self.texture_index = buff[3]
         self.unk0x06 = buff[4]
         self.anisotropy = buff[5]
         #buff[6]
         self.unk0x0C = buff[7]
-        is_swappable = buff[8]
+        self.is_swappable = buff[8]
         self.index = buff[9]
         self.unk0x10 = buff[10]
-        
-        if is_swappable & 0x01 == 1:
-            self.is_swappable = True
     
     def pack(self, file, endian):
-        is_swappable = 0
-        if self.is_swappable == True:
-            is_swappable = is_swappable + 1
-        
         buff = struct.pack(endian + self.fmt, \
-                            self.unk0x00.pack(endian), \
-                            self.mipmap.pack(endian),  self.uv_wrap.pack(endian), \
+                            self.unk0x00, self.mipmap, self.uv_wrap, \
                             self.texture_index, self.unk0x06, self.anisotropy, \
-                            0, self.unk0x0C, is_swappable, \
+                            0, self.unk0x0C, self.is_swappable, \
                             self.index, self.unk0x10)
         file.write(buff)
         
@@ -281,7 +146,7 @@ class VertexControll:
     
     def unpack(self, file, endian):
         self.base_offs = file.tell()
-        print(MSG_INFO_DATA_HEX.format('VertexControll Offset', self.base_offs))
+#        print(MSG_INFO_DATA_HEX.format('VertexControll Offset', self.base_offs))
         
         bytes = file.read(struct.calcsize(self.fmt))
         buff = struct.unpack_from(endian + self.fmt, bytes, 0)
@@ -291,8 +156,8 @@ class VertexControll:
         self.offset_2 = buff[2]
         self.offset_3 = buff[3]
         self.offset_4 = buff[4]
-        print('VertexControll Offset 2: {0:#X} | ABS: {1:#X}'.format(self.offset_2, self.offset_2 + self.base_offs))
-        print('VertexControll Offset 3: {0:#X} | ABS: {1:#X}'.format(self.offset_3, self.offset_3 + self.base_offs))
+#        print('VertexControll Offset 2: {0:#X} | ABS: {1:#X}'.format(self.offset_2, self.offset_2 + self.base_offs))
+#        print('VertexControll Offset 3: {0:#X} | ABS: {1:#X}'.format(self.offset_3, self.offset_3 + self.base_offs))
 
 
 #Vertex Render Flag
@@ -522,9 +387,9 @@ class Material:
         #0
         self.unk0x02 = buff[1]
         self.unk0x03 = buff[2]
-        self.color0 = [ buff[3]/0xFF, buff[4]/0xFF, buff[5]/0xFF, buff[6]/0xFF ]
-        self.color1 = [ buff[7]/0xFF, buff[8]/0xFF, buff[9]/0xFF,  buff[10]/0xFF ]
-        self.color2 = [ buff[11]/0xFF, buff[12]/0xFF, buff[13]/0xFF, buff[14]/0xFF ]
+        self.color0 = [ buff[ 3], buff[ 4], buff[ 5], buff[ 6] ]
+        self.color1 = [ buff[ 7], buff[ 8], buff[ 9], buff[10] ]
+        self.color2 = [ buff[11], buff[12], buff[13], buff[14] ]
         self.emission = buff[15]
         self.transparency = buff[16]
         self.material_count = buff[17]
@@ -541,13 +406,13 @@ class Material:
 
     def pack(self, file, endian):
         vat = self.vtx_descriptor.pack()
-        print( MSG_INFO_DATA_HEX.format('VAT', vat) )
+#        print( MSG_INFO_DATA_HEX.format('VAT', vat) )
         buff = struct.pack(endian + self.fmt, \
                     0, \
                     self.unk0x02, self.unk0x03, \
-                    int(self.color0[0]*0xFF), int(self.color0[1]*0xFF), int(self.color0[2]*0xFF), int(self.color0[3]*0xFF), \
-                    int(self.color1[0]*0xFF), int(self.color1[1]*0xFF), int(self.color1[2]*0xFF), int(self.color1[3]*0xFF), \
-                    int(self.color2[0]*0xFF), int(self.color2[1]*0xFF), int(self.color2[2]*0xFF), int(self.color2[3]*0xFF), \
+                    self.color0[0], self.color0[1], self.color0[2], self.color0[3], \
+                    self.color1[0], self.color1[1], self.color1[2], self.color1[3], \
+                    self.color2[0], self.color2[1], self.color2[2], self.color2[3], \
                     self.emission, self.transparency, \
                     self.material_count, \
                     self.vtx_render.pack(), self.unk0x14, self.unk0x15, \
@@ -621,8 +486,8 @@ class Vertex:
         self.tex7mtxidx = -1
         self.pos = [0.0, 0.0, 0.0]
         self.nrm = [0.0, 0.0, 0.0]
-        self.clr0 = [1.0, 1.0, 1.0, 1.0]
-        self.clr1 = [1.0, 1.0, 1.0, 1.0]
+        self.clr0 = [0xFF, 0xFF, 0xFF, 0xFF]
+        self.clr1 = [0xFF, 0xFF, 0xFF, 0xFF]
         self.tex0 = [0.0, 0.0]
         self.tex1 = [0.0, 0.0]
         self.tex2 = [0.0, 0.0]
@@ -658,24 +523,20 @@ class Vertex:
         fmt = self.fmt_clr
         bytes = file.read(struct.calcsize(fmt))
         buff = struct.unpack_from(endian + fmt, bytes, 0)
-        r = ((buff[0] >> 0x18) & 0xFF)/0xFF
-        g = ((buff[0] >> 0x10) & 0xFF)/0xFF
-        b = ((buff[0] >> 0x08) & 0xFF)/0xFF
-        a = ((buff[0] >> 0x00) & 0xFF)/0xFF
+        r = ((buff[0] >> 0x18) & 0xFF)
+        g = ((buff[0] >> 0x10) & 0xFF)
+        b = ((buff[0] >> 0x08) & 0xFF)
+        a = ((buff[0] >> 0x00) & 0xFF)
         clr = [ r, g, b, a ]
         return clr
     
     #Pack Color
     def pack_clr(self, file, endian, clr):
-        r = int(clr[0]*0xFF)
-        g = int(clr[1]*0xFF)
-        b = int(clr[2]*0xFF)
-        a = int(clr[3]*0xFF)
         bin_clr = 0x00
-        bin_clr = bin_clr + (r << 0x18)
-        bin_clr = bin_clr + (g << 0x10)
-        bin_clr = bin_clr + (b << 0x08)
-        bin_clr = bin_clr + (a << 0x00)
+        bin_clr = bin_clr + (clr[0] << 0x18)
+        bin_clr = bin_clr + (clr[1] << 0x10)
+        bin_clr = bin_clr + (clr[2] << 0x08)
+        bin_clr = bin_clr + (clr[3] << 0x00)
         buff = struct.pack(endian + self.fmt_clr, bin_clr)
         file.write(buff)
     
@@ -736,7 +597,7 @@ class Vertex:
         return val
     
     def unpack(self, file, endian, attribute, vertex_attribute, base_offs = 0x00):
-        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
         if (attribute.is_skin or attribute.is_effective):
 
             self.pos = self.unpack_vec3(file, endian, attribute.is_16bit)
@@ -779,7 +640,7 @@ class Vertex:
             if vertex_attribute.gx_va_nrm == True:
                 self.nrm = self.unpack_vec3(file, endian, attribute.is_16bit)
             if vertex_attribute.gx_va_nbt == True:
-                print('nbt :  {0:#X}'.format(file.tell()))
+#                print('nbt :  {0:#X}'.format(file.tell()))
                 fmt = (self.fmt_vtx_16 if attribute.is_16bit else self.fmt_vtx).format(9)
                 bytes = file.read(struct.calcsize(fmt))
                 buff = struct.unpack_from(endian + fmt, bytes, 0)
@@ -816,7 +677,7 @@ class Vertex:
                 self.light = self.unpack_vec3(file, endian, attribute.is_16bit)
 
     def pack(self, file, endian, attribute, vertex_attribute):
-        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Vertex Address', file.tell()) )
         if (attribute.is_skin or attribute.is_effective):
             #skin, effective
             buff = struct.pack(endian + self.fmt_skin, \
@@ -887,6 +748,7 @@ class Vertex:
                     )
                 file.write(buff)
 
+
 class Strip:
     fmt = '1B1H'            #default,  #16bit, stiching
     fmt_skin_16bit = '{0}H'   #skin(16bit), effective(16bit)
@@ -946,13 +808,14 @@ class Strip:
         file.write(buff)
         for vertex in self.vertexs:
             vertex.pack(file, endian, attribute, vertex_attribute)
-                        
+
+
 class DisplayList:
     def __init__(self):
         self.strips = []
     
     def unpack(self, file, endian, attribute, vtx_attribute, dlist_end_offs, vertex_controll):
-        print( MSG_INFO_DATA_HEX.format('DisplayList End Addres: {0:#X}', dlist_end_offs) )
+#        print( MSG_INFO_DATA_HEX.format('DisplayList End Addres: {0:#X}', dlist_end_offs) )
         
         #seek 1byte for 16bit, stiching
         file.seek(file.tell() + 0x01)
@@ -978,7 +841,7 @@ class DisplayList:
         #Padding
         while (file.tell() % 0x20 != 0x00):
             file.write(bytes(1))
-        
+
 
 class DisplatListHeader:
     fmt = '8b2i'
@@ -1020,12 +883,12 @@ class Submesh:
         self.material = Material()
         self.dlist_headers = []
         self.boundingsphere_origin = [0.0, 0.0, 0.0]
-        self.unk0x3C = 0x00
+        self.unk0x3C = 0.0
         self.unk0x40 = 0x00
         self.dlists = []
     
     def unpack(self, file, endian, attribute, vertex_controll, vtxcon_offs3):
-        print( MSG_INFO_DATA_HEX.format('Submesh Offset', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('Submesh Offset', file.tell()) )
         self.material.unpack(file, endian)
         
         dlist_header = DisplatListHeader()
@@ -1047,13 +910,13 @@ class Submesh:
         #ExtraDisplayListHeader
         if(vtx_render.dlist1_0 or vtx_render.dlist1_1):
             #dlist_1_0 or dlist_1_1 Exist
-            print('Detect ExtraDisplayList')
+#            print('Detect ExtraDisplayList')
             offs = 0x00
             for dlist_size in self.dlist_headers[0].dlist_sizes:
                 offs = offs + dlist_size
             #Seek to ExtraDisplayListHeader
             file.seek(file.tell() + offs)
-            print( MSG_INFO_DATA_HEX.format('Seek(Extra DisplayList Load)', file.tell()) )
+#            print( MSG_INFO_DATA_HEX.format('Seek(Extra DisplayList Load)', file.tell()) )
             #Store submesh offset
             dlist_header = DisplatListHeader()
             dlist_header.unpack(file, endian)
@@ -1069,24 +932,24 @@ class Submesh:
             if (attribute.is_skin or attribute.is_effective):
                 #skin, effective
                 dlist_offs = vertex_controll.base_offs + vtxcon_offs3
-                print( MSG_INFO_DATA_HEX.format('Submesh VertexControll Offset 3', dlist_offs) )
+#                print( MSG_INFO_DATA_HEX.format('Submesh VertexControll Offset 3', dlist_offs) )
             else:
                 #16bit, stiching
                 dlist_offs = dlist_header.submesh_end_offs
             dlist_end_offs = dlist_offs
-            print( MSG_INFO_DATA_HEX.format('Submesh End Offset', dlist_end_offs) )
+#            print( MSG_INFO_DATA_HEX.format('Submesh End Offset', dlist_end_offs) )
             #seek to VertexControll's offset 3 or Submesh End Offset
             file.seek(dlist_offs)
             for i, dlist_size in enumerate(dlist_header.dlist_sizes):
                 if (attribute.is_skin or attribute.is_effective):
                     #skin, effective
                     #needs to dlist_size * 0x04
-                    print('DisplayList{0} Length: {1:#X}'.format(i, dlist_size))
-                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size * 0x04))
+#                    print('DisplayList{0} Length: {1:#X}'.format(i, dlist_size))
+#                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size * 0x04))
                     dlist_end_offs = dlist_end_offs + (dlist_size * 0x04)
                 else:
                     #default, 16bit, stiching
-                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size))
+#                    print('DisplayList{0} Size: {1:#X}'.format(i, dlist_size))
                     dlist_end_offs = dlist_end_offs + dlist_size
                 #read displaylist
                 if file.tell() <= dlist_end_offs:
@@ -1201,16 +1064,6 @@ class Gcmf():
             if file.tell()%0x20 != 0x00:
                 file.seek(file.tell() + 0x10)
 
-            #isMatrix = (self.attribute.is_skin or self.attribute.is_effective)
-            #print('Contains Transoform Matrix: {0}'.format(isMatrix))
-            #if isMatrix :
-            #    for i in range(self.mtx_count):
-            #        mtx = TransformMatrix()
-            #        mtx.read(file, endian)
-            #        self.mtxs.append(mtx)
-            #    if file.tell()%0x20 != 0x00:
-            #        file.seek(file.tell() + 0x10)
-
             vtxcon_offs3 = 0x00
             submesh_offs = gcmf_offset + self.submesh_offset
             
@@ -1241,7 +1094,7 @@ class Gcmf():
     #Pack
     def pack(self, file, endian):
         print('----Pack----')
-        print( MSG_INFO_DATA_HEX.format('GCMF Address', file.tell()) )
+#        print( MSG_INFO_DATA_HEX.format('GCMF Address', file.tell()) )
         # skip Gcmf Header
         gcmf_offset = file.tell()
         file.seek(gcmf_offset + struct.calcsize(self.fmt))
