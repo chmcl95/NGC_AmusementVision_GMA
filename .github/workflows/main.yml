@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
       with:
-        ref: blender_4_x
+        ref: master
         
     - name: Create "io_scene_avision_gma ZIP"
       uses: thedoctor0/zip-release@0.7.5
@@ -14,7 +14,7 @@ jobs:
         type: 'zip'
         filename: 'io_scene_avision_gma.zip'
         exclusions: '*.git* .readme.md import_gml.py gml.py'
-        path: '/src/'
+        path: 'src/'
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
