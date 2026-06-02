@@ -14,7 +14,7 @@ jobs:
         type: 'zip'
         filename: 'io_scene_avision_gma.zip'
         exclusions: '*.git* .readme.md import_gml.py gml.py'
-        path: 'src/'
+        directory: 'src/'
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
