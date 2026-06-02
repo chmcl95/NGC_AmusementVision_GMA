@@ -1,0 +1,88 @@
+//------------------------------------------------
+//--- 010 Editor v11.0 Binary Template
+//
+//      File: AmusementVision GML (Gcmf Model L....?) List?
+//   Authors: CH-MCL
+//   Version: 0.0.1
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+BigEndian();
+//struct GMA {
+    // Keyframe
+    // FSeek(header.keyframe_AbsPtr);
+
+    // local uint keyframe_Adr;
+    // struct Keyframe {
+    //    int animeKey_count;
+    //    uint animeKey_AbsPtr;
+    // } keyframe [header.keyframe_count] <optimize=false>;
+
+    // AnimationKey
+    // FSeek(keyframe[0].animeKey_AbsPtr);
+    // local int i = 0;
+    // struct AnimationKeys0 {
+    //    struct AnimationKey {
+    //        int lerp_count;
+    //        float key;
+    //        float value1;
+    //        float value2;
+    //        float value3;
+    //    } animationKey [keyframe[0].animeKey_count] <bgcolor=cLtBlue, optimize=false>;
+    //} animationKeys0;
+
+    //FSeek(keyframe[1].animeKey_AbsPtr);
+    //struct AnimationKey1 {
+    //    struct AnimationKey animationKey [keyframe[1].animeKey_count] <bgcolor=cLtBlue, optimize=false>;
+    //} animationKeys1;
+
+    //FSeek(keyframe[2].animeKey_AbsPtr);
+    //struct AnimationKey2 {
+    //    struct AnimationKey animationKey [keyframe[2].animeKey_count] <bgcolor=cLtBlue, optimize=false>;
+    //} animationKeys2;
+//} gma;
+
+
+// Header
+struct Header {
+    int gcmfCount;
+    int gcmfNameOffset; // Abs offset
+    int gcmfNameSize; // seems to acctual size + 1
+    int unk0x0C;
+    int unk0x10;
+    int unk0x14;
+    int unk0x18;
+    int unk0x1C;
+} header;
+//FSeek(header.gcmfCount * 4);
+//FSeek(0x08);
+////Gcmf Entry
+struct GcmfEntry {
+    int gcmfOffset; // Abs offset
+    int gcmfSize;
+    int nameOffset; // Abs offset from "gcmfNameOffset"
+    int unk0x0C;
+} entrys[header.gcmfCount];    
+
+local uint nameBaseOffset = FTell();
+
+//local int i;
+/*
+for(i = 0; i < header.gcmfCount; i++){
+    // Gcmf
+    struct Gcmf {
+        local uint nameOffset = entrys[i].nameOffset + header.nameBaseOffset;
+        string name = ReadString(nameOffset, -1);
+
+
+
+
+    }
+    //entrys[i].gcmfOffset += header.gcmfBaseOffset;
+    //entrys[i].nameOffset += header.nameBaseOffset;
+}
+*/

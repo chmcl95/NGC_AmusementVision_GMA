@@ -1,0 +1,567 @@
+//------------------------------------------------
+//--- 010 Editor v11.0 Binary Template
+//
+//      File: AmusementVision GMA (Gcmf Model Archive)
+//   Authors: CH-MCL
+//   Version: 0.0.2
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 0.0.1 2022.06.29 Support GMA(except DisplayList)          [CH-MCL]
+//   History: 0.0.2 2024.08.18 Partialy support Skin, Effective         [CH-MCL]
+//------------------------------------------------
+
+// GX DRAW code
+typedef enum <ubyte> {
+    GX_NOP = 0x00,
+    GX_LOAD_BP_REG = 0x61,
+    // 1000|0VatIdx[2:0]
+    GX_DRAW_QUADS_VAT0 = 0x80,
+    GX_DRAW_QUADS_VAT1 = 0x81,
+    GX_DRAW_QUADS_VAT2 = 0x82,
+    GX_DRAW_QUADS_VAT3 = 0x83,
+    GX_DRAW_QUADS_VAT4 = 0x84,
+    GX_DRAW_QUADS_VAT5 = 0x85,
+    GX_DRAW_QUADS_VAT6 = 0x86,
+    GX_DRAW_QUADS_VAT7 = 0x87,
+    // 1001|0VatIdx[2:0]
+    GX_DRAW_TRIANGLES_VAT0 = 0x90,
+    GX_DRAW_TRIANGLES_VAT1 = 0x91,
+    GX_DRAW_TRIANGLES_VAT2 = 0x92,
+    GX_DRAW_TRIANGLES_VAT3 = 0x93,
+    GX_DRAW_TRIANGLES_VAT4 = 0x94,
+    GX_DRAW_TRIANGLES_VAT5 = 0x95,
+    GX_DRAW_TRIANGLES_VAT6 = 0x96,
+    GX_DRAW_TRIANGLES_VAT7 = 0x97,
+    // 1001|1VatIdx[2:0]
+    GX_DRAW_TRIANGLE_STRIP_VAT0 = 0x98,
+    GX_DRAW_TRIANGLE_STRIP_VAT1 = 0x99,
+    GX_DRAW_TRIANGLE_STRIP_VAT2 = 0x9A,
+    GX_DRAW_TRIANGLE_STRIP_VAT3 = 0x9B,
+    GX_DRAW_TRIANGLE_STRIP_VAT4 = 0x9C,
+    GX_DRAW_TRIANGLE_STRIP_VAT5 = 0x9D,
+    GX_DRAW_TRIANGLE_STRIP_VAT6 = 0x9E,
+    GX_DRAW_TRIANGLE_STRIP_VAT7 = 0x9F,
+    // 1010|0VatIdx[2:0]
+    GX_DRAW_TRIANGLE_FAN_VAT0 = 0xA0,
+    GX_DRAW_TRIANGLE_FAN_VAT1 = 0xA1,
+    GX_DRAW_TRIANGLE_FAN_VAT2 = 0xA2,
+    GX_DRAW_TRIANGLE_FAN_VAT3 = 0xA3,
+    GX_DRAW_TRIANGLE_FAN_VAT4 = 0xA4,
+    GX_DRAW_TRIANGLE_FAN_VAT5 = 0xA5,
+    GX_DRAW_TRIANGLE_FAN_VAT6 = 0xA6,
+    GX_DRAW_TRIANGLE_FAN_VAT7 = 0xA7,
+    // 1010|1VatIdx[2:0]
+    GX_DRAW_LINES_VAT0 = 0xA8,
+    GX_DRAW_LINES_VAT1 = 0xA9,
+    GX_DRAW_LINES_VAT2 = 0xAA,
+    GX_DRAW_LINES_VAT3 = 0xAB,
+    GX_DRAW_LINES_VAT4 = 0xAC,
+    GX_DRAW_LINES_VAT5 = 0xAD,
+    GX_DRAW_LINES_VAT6 = 0xAE,
+    GX_DRAW_LINES_VAT7 = 0xAF,
+    // 1011|0VatIdx[2:0]
+    GX_DRAW_LINE_STRIP_VAT0 = 0xB0,
+    GX_DRAW_LINE_STRIP_VAT1 = 0xB1,
+    GX_DRAW_LINE_STRIP_VAT2 = 0xB2,
+    GX_DRAW_LINE_STRIP_VAT3 = 0xB3,
+    GX_DRAW_LINE_STRIP_VAT4 = 0xB4,
+    GX_DRAW_LINE_STRIP_VAT5 = 0xB5,
+    GX_DRAW_LINE_STRIP_VAT6 = 0xB6,
+    GX_DRAW_LINE_STRIP_VAT7 = 0xB7,
+    // 1011|1VatIdx[2:0]
+    GX_DRAW_POINTS_VAT0 = 0xB8,
+    GX_DRAW_POINTS_VAT1 = 0xB9,
+    GX_DRAW_POINTS_VAT2 = 0xBA,
+    GX_DRAW_POINTS_VAT3 = 0xBB,
+    GX_DRAW_POINTS_VAT4 = 0xBC,
+    GX_DRAW_POINTS_VAT5 = 0xBD,
+    GX_DRAW_POINTS_VAT6 = 0xBE,
+    GX_DRAW_POINTS_VAT7 = 0xBF
+} DrawOPCode;
+
+typedef struct {
+    ubyte color[4];
+} Color;
+
+typedef struct {
+    float x;
+    float y;
+} Vector2;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} Vector3;
+
+typedef struct {
+    short x;
+    short y;
+} Vector2_VAT1;
+
+typedef struct {
+    short x;
+    short y;
+    short z;
+} Vector3_VAT1;
+
+
+typedef struct {
+    uint pad : 6;
+    uint gx_va_nbt : 1;
+    uint gx_va_light : 1;
+    uint gx_va_tex_mtx_array : 1;
+    uint gx_va_nrm_mtx_array : 1;
+    uint gx_va_pos_mtx_array : 1;
+    uint gx_va_tex7 : 1;
+    uint gx_va_tex6 : 1;
+    uint gx_va_tex5 : 1;
+    uint gx_va_tex4 : 1;
+    uint gx_va_tex3 : 1;
+    uint gx_va_tex2 : 1;
+    uint gx_va_tex1 : 1;
+    uint gx_va_tex0 : 1;
+    uint gx_va_clr1 : 1;
+    uint gx_va_clr0 : 1;
+    uint gx_va_nrm : 1;
+    uint gx_va_pos : 1;
+    uint gx_va_tex7mtxidx : 1;
+    uint gx_va_tex6mtxidx : 1;
+    uint gx_va_tex5mtxidx : 1;
+    uint gx_va_tex4mtxidx : 1;
+    uint gx_va_tex3mtxidx : 1;
+    uint gx_va_tex2mtxidx : 1;
+    uint gx_va_tex1mtxidx : 1;
+    uint gx_va_tex0mtxidx : 1;
+    uint gx_va_pnmtxidx : 1;
+} VertexAttribute;
+
+// Material
+typedef struct {
+    short unk0x00;
+    byte unk0x02;
+    byte unk0x03;
+    ParseColor();
+    ParseColor();
+    ParseColor();
+    byte emission; //correct?
+    byte transparency;
+    byte material_count;
+    byte vtx_render;
+    byte unk0x14;
+    byte unk0x15;
+    short texture_indexs[3];
+    VertexAttribute vtx_descriptor;
+
+    // Displaylist Header
+    struct Dlist_Header {
+        signed char trans_mtxs[8];
+        int dlist_sizes[2];
+    } dlist_header;
+
+    Vector3  bounding_sphere_origin;
+    float unk0x3C;
+    uint unk0x40;
+    int padding0x44[7];
+
+} Material;
+
+// Texture
+typedef struct {
+    short unk0x00;
+    struct Mipmap {
+        byte Unknown7 : 1;
+        byte Unknown6 : 1;
+        byte Unknown5 : 1<comment="Used as alpha mask?">;
+        byte Unknown4 : 1<comment="Height map? Blend? These textures are greyscale">;
+        byte near     : 1<comment="Enable Near">;
+        byte Unknown2 : 1;
+        byte Unknown1 : 1;
+        byte enable   : 1<comment=" Mipmap Mipmap">; 
+    } mipmap;
+    struct Wrap {
+        byte Unknown7 : 1;
+        byte Unknown6 : 1;
+        byte mirrorY  : 1<comment="Enable Mirror Y">;
+        byte repeatY  : 1<comment="Enable Repeat Y">;
+        byte mirrorX  : 1<comment="Enable Mirror X">;
+        byte repeatX  : 1<comment="Enable Repeat X">;
+        byte Unknown1 : 1;
+        byte Unknown0 : 1;
+    } tex_wrap;
+    short texture_index;
+    byte unk0x06;
+    byte anisotropy;
+    uint unk0x08;
+    byte unk0x0C;
+    byte is_swappable;
+    short index;
+    uint unk0x10;
+    uint padding0x14;
+    uint padding0x18;
+    uint padding0x1C;
+} Texture;
+
+// Matrix
+typedef struct {
+    float m00;
+    float m01;
+    float m02;
+    float m03;
+    float m10;
+    float m11;
+    float m12;
+    float m13;
+    float m20;
+    float m21;
+    float m22;
+    float m23;
+} Transform_Matrix;
+
+typedef struct {
+    int count;
+    int offset_1;
+    int offset_2;
+    int offset_3;
+    int offset_4;
+    int unk0x14[3];
+} Vertex_Controller;
+
+typedef struct {
+    float unk0x00[6];
+    ushort bone_id[2];
+    float weight;
+} Vertex_Con1;
+
+
+typedef struct {
+    DrawOPCode drawOp;
+    short count;
+    local int j = 0;
+    for (j = 0; j < count; j++) {
+
+        struct VertexBasic {
+            if (material.vtx_descriptor.gx_va_pnmtxidx) {
+                byte pnmtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex0mtxidx) {
+                byte tex0mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex1mtxidx) {
+                byte tex1mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex2mtxidx) {
+                byte tex2mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex3mtxidx) {
+                byte tex3mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex4mtxidx) {
+                byte tex4mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex5mtxidx) {
+                byte tex5mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex6mtxidx) {
+                byte tex6mtxidx;
+            }
+            if (material.vtx_descriptor.gx_va_tex7mtxidx) {
+                byte tex7mtxidx;
+            }
+        
+            if (material.vtx_descriptor.gx_va_pos) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector3_VAT1 pos;
+                } else {
+                    Vector3 pos;
+                }
+            }
+        
+            if (material.vtx_descriptor.gx_va_nbt) {
+                struct NBT {
+                    if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                        Vector3 nrm;
+                        Vector3 binormal;
+                        Vector3 tangent;
+                    } else {
+                        Vector3_VAT1 nrm;
+                        Vector3_VAT1 binormal;
+                        Vector3_VAT1 tangent;
+                    }
+                } nbt;
+            }
+        
+            if (material.vtx_descriptor.gx_va_nrm ) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector3_VAT1 nrm;
+                } else {
+                    Vector3 nrm;
+                }
+            }
+        
+            if (material.vtx_descriptor.gx_va_clr0) {
+                ParseColor();
+            }
+            if (material.vtx_descriptor.gx_va_clr1) {
+                ParseColor();
+            }
+        
+            if (material.vtx_descriptor.gx_va_tex0) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex0;
+                } else {
+                    Vector2 tex0;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex1) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex1;
+                } else {
+                    Vector2 tex1;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex2) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex2;
+                } else {
+                    Vector2 tex2;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex3) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex3;
+                } else {
+                    Vector2 tex3;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex4) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex4;
+                } else {
+                    Vector2 tex4;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex5) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex5;
+                } else {
+                    Vector2 tex5;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex6) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex6;
+                } else {
+                    Vector2 tex6;
+                }
+            }
+            if (material.vtx_descriptor.gx_va_tex7) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 tex7;
+                } else {
+                    Vector2 tex7;
+                }
+            }
+        
+            // hug?
+            //if vertex_attribute.gx_va_pos_mtx_array == True:
+            //    self.pos_mtx_array = mtx
+            //if vertex_attribute.gx_va_nrm_mtx_array == True:
+            //    self.nrm_mtx_array = mtx
+            //if vertex_attribute.gx_va_tex_mtx_array == True:
+            //    self.tex_mtx_array = mtx
+        
+            if (material.vtx_descriptor.gx_va_light) {
+                if (drawOp == GX_DRAW_TRIANGLE_STRIP_VAT1) {
+                    Vector2_VAT1 light;
+                } else {
+                    Vector2 light;
+                }
+            }
+        } vertex;
+
+    }
+} StripBasic;
+
+// GCMF Attrinbute
+typedef struct {
+    uint pad          : 27;
+    uint is_effective :  1;
+    uint is_skin      :  1;
+    uint is_stiching  :  1;
+    uint is_unk0x01   :  1;
+    uint is_16bit     :  1;
+} Attribute <read=ParseSubmesh>;
+
+
+void ParseColor() {
+    local ubyte rgba[4];
+    ReadBytes(rgba, FTell(), 4);
+    local int r, g, b;
+    r = rgba[0];
+    g = rgba[1];
+    g = g << 8;
+    b = rgba[2];
+    b = b << 16;
+    local uint clr = ( (b + g + r) );
+    SetBackColor(clr);
+    Color color;
+    SetBackColor(cNone);
+}
+
+
+void ParseSubmesh(Attribute &attribute) {
+    // Submesh
+    struct Submesh {
+        // Material
+        Material material;
+
+        if (attribute.is_skin 
+            || attribute.is_effective
+        ) {
+/*
+            struct DisplaylistSkin {
+                struct VertexSkin {
+                    Vector3 pos;
+                    Vector3 nrm;
+                    Vector2 tex0;
+                    Vector2 tex1;
+                    Vector2 tex2;
+                    ParseColor();
+                    uint unk_0x34; // unknown7_1
+                    uint unk_0x38; // unknown7_2
+                    uint unk_0x3C; // unknown7_3
+                } vertex;
+            } displayList<comment="Skinning">;
+*/
+        } else {
+
+            local int i = 0;
+            local int submesh_offs_abs = FTell();
+            for(i = 0; i < 2; i++) {
+                submesh_offs_abs += material.dlist_header.dlist_sizes[i];
+                if (material.dlist_header.dlist_sizes[i] < 1) {
+                    continue;
+                }
+    
+                // default, 16bit, stiching
+                struct DisplaylistBasic {
+                    byte pad;
+    
+                    local short _count = 0;
+                    while (FTell() < (submesh_offs_abs - 0x03)) {
+                        _count = ReadShort(FTell() + 0x01);
+                        if(_count < 1) {
+                            break;
+                        }                    
+    
+                        StripBasic strip;
+                    }
+                } displayList<comment="Basic DisplayList">;
+                while (FTell() % 0x20) {
+                    FSeek(FTell() + 0x01);
+                }
+            }
+    
+            FSeek(submesh_offs_abs);
+        }
+    } submesh;
+}
+
+void ParseName(uint adr) {
+    local uint file_ptr = FTell();
+
+    FSeek(adr);
+    string name<comment="this isn't part of GCMF">;
+    
+    FSeek(file_ptr);
+}
+
+void ParseGCMF(uint adr, uint adr_name) {
+    local uint file_ptr = FTell();
+
+    FSeek(adr);
+    struct Gcmf {
+        
+        local int i = 0;
+        local int all_submesh_count = 0;
+        local int submesh_offs_abs = 0; 
+
+        char magic[4]<comment="const GCMF">;
+        Attribute attribute;
+
+        ParseName(nameOffset);
+        Vector3 origin;
+        float boundspher_radius;
+        short texture_count;
+        short opaque_count;
+        short transparent_count;
+        byte mtx_count;
+        byte padding0x1F;
+        int submesh_offset[2];
+        signed byte mtx_idxs[8];
+
+
+        FSeek(FTell() + 0x10);
+        if (texture_count > 0) {
+            // Texture
+            // Material called in smbworkshop doc and GxModelViewer
+            Texture texture[texture_count];
+        }
+
+        if (mtx_count > 0) {
+            // Transform Matrix
+            Transform_Matrix mtx[mtx_count];
+        }
+
+        // 0x20 aling
+        if (FTell() % 0x20 != 0x00){
+            FSeek(FTell() + 0x10);
+        }               
+
+        if (attribute.is_skin 
+                || attribute.is_effective
+            ) {
+            Vertex_Controller vertex_controll;
+        }
+
+        all_submesh_count = opaque_count + transparent_count;
+        for (i = 0; i < all_submesh_count; i++) {
+            ParseSubmesh(attribute);
+        }
+
+    } gcmf;
+
+    FSeek(file_ptr);
+}
+
+
+// main
+BigEndian();
+// Header
+struct Header {
+    int gcmfCount;
+    uint gcmfBaseOffset;
+} header;
+FSeek(header.gcmfCount * 4);
+FSeek(0x08);
+//Gcmf Entry
+struct GcmfEntry {
+    uint gcmfOffset;
+    uint nameOffset;
+} entrys[header.gcmfCount];    
+
+
+local int nameBaseOffset = FTell();
+local int i;
+local int gcmfOffset = 0x00;
+local int nameOffset = 0x00;
+
+for(i = 0; i < header.gcmfCount; i++) {
+    gcmfOffset = header.gcmfBaseOffset + entrys[i].gcmfOffset;
+    nameOffset = entrys[i].nameOffset + nameBaseOffset;
+
+    ParseGCMF(gcmfOffset, nameOffset);
+}

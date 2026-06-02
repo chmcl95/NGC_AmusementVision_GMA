@@ -143,11 +143,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    # GCMFTextureNode をシェーダーノードとして登録
+    # Shader Node
     bpy.types.NODE_MT_add.append(gcmf_node._add_node_menu)
+    # Import/Export Menu
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    # Custom PropertyGroup
+    # Custom Property Group
     bpy.types.Object.gcmf_object = \
         bpy.props.PointerProperty(type=gcmf_setting.GCMF_ObjectSetting)
     bpy.types.Material.gcmf_material = \
