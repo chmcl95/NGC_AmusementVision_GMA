@@ -6,7 +6,7 @@ import numpy
 
 from .gma import Gma
 from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material
-from .gcmf_node import GCMFTextureNode
+from .gcmf_shader_node import GCMFTextureNode
 
 # Messages
 MSG_INFO_INIT = '---- {0} ----'
@@ -64,7 +64,7 @@ def _get_or_create_image(images: dict, name: str) -> bpy.types.Image:
 
 
 # ---------------------------------------------------------------------------
-# Generate Blender Material  (カスタムノード版)
+# Generate Blender material.
 # ---------------------------------------------------------------------------
 def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list,
                       images: dict, is_alpha: bool) -> bpy.types.Material:
@@ -100,7 +100,7 @@ def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list,
     output.location = (600, 0)
     links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
 
-    # ベースカラーをマテリアルの color0 で初期化
+    # Initialize base color from material color0.
     r = material.color0[0] / 0xFF
     g = material.color0[1] / 0xFF
     b = material.color0[2] / 0xFF
@@ -121,12 +121,12 @@ def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list,
         if raw_tex is None:
             continue
 
-        # --- Generate GCMFTextureNode ---
+        # --- Create GCMFTextureNode instance ---
         gcmf_node = nodes.new('GCMFTextureNode')
         gcmf_node.location  = (tex_x, 300 - i * 320)
         gcmf_node.label     = f'GCMF Tex [{i}]'
 
-        # --- save as Properties ---
+        # --- Store GCMF texture properties ---
         gcmf_node.unk0x00       = convert_value2flags(raw_tex.unk0x00,    gcmf_node.unk0x00)
         gcmf_node.mipmap        = convert_value2flags(raw_tex.mipmap,     gcmf_node.mipmap)
         gcmf_node.uv_wrap       = convert_value2flags(raw_tex.uv_wrap,    gcmf_node.uv_wrap)
@@ -138,26 +138,26 @@ def generate_material(material: Material, mat_idx: int, gcmf_texs_data: list,
         gcmf_node.is_swappable  = convert_value2flags(raw_tex.is_swappable,  gcmf_node.is_swappable)
         gcmf_node.unk0x10       = convert_value2flags(raw_tex.unk0x10,       gcmf_node.unk0x10)
 
-        # --- 画像を設定 (2.79版 tex.image = img 相当) ---
+        # --- Assign image (replaces tex.image = img in 2.79) ---
         img_id = raw_tex.texture_index
         if img_id >= 0:
             is_common = gcmf_node.unk0x00[Texture_Flags0x00.COMMON_TEX]
             img_name  = NAME_TPL_COMMON.format(img_id) if is_common else NAME_TPL.format(img_id)
             img = _get_or_create_image(images, img_name)
             gcmf_node.image = img
-            # 内部 NodeGroup の ShaderNodeTexImage にも反映
+            # Also sync to the internal ShaderNodeTexImage.
             gcmf_node._sync_image()
 
-        # --- BSDF に接続 (2.79版 mat.texture_slots[i] = tex 相当) ---
-        # スロット0のみ Base Color に直結（プレビュー用）
-        # 2枚目以降は接続するがユーザーが自由に組み替え可能
+        # --- Connect to BSDF (replaces mat.texture_slots[i] = tex in 2.79) ---
+        # Slot 0 is wired to Base Color for preview purposes.
+        # Slots 1+ are placed but left unconnected for the user to wire freely.
         if i == 0:
             links.new(gcmf_node.outputs['Color'], bsdf.inputs['Base Color'])
             if is_alpha:
                 links.new(gcmf_node.outputs['Alpha'], bsdf.inputs['Alpha'])
             first_gcmf_node = gcmf_node
-        # 2枚目以降はノードを配置するが接続はユーザーに委ねる
-        # （接続したい場合は gcmf_node.outputs['Color'] → MixRGB などへ）
+        
+        
 
     return mat
 
@@ -246,7 +246,7 @@ def generate_attribute(attribute):
 # Import entry point
 # ---------------------------------------------------------------------------
 def load(filepath, little_endian=False):
-    # NodeGroup を事前に準備
+    # Load and parse the GMA file.
 
     with open(filepath, 'rb') as file:
         sel_endian = '<' if little_endian else '>'
@@ -312,7 +312,7 @@ def load(filepath, little_endian=False):
             if all_attribute.gx_va_tex6: generate_uv(mesh, NAME_UV.format(6), mesh_data.tex6s)
             if all_attribute.gx_va_tex7: generate_uv(mesh, NAME_UV.format(7), mesh_data.tex7s)
 
-            # マテリアル生成
+            # Generate Blender materials for each submesh.
             for matid, submesh in enumerate(gcmf.submeshs):
                 is_alpha = matid >= gcmf.opaque_count
                 mat = generate_material(submesh.material, matid,

@@ -1,5 +1,5 @@
 import bpy
-from .gcmf_node import GCMFTextureNode, collect_gcmf_texture_nodes
+from .gcmf_shader_node import GCMFTextureNode, collect_gcmf_texture_nodes
 from .ui import draw_checkbox_row, draw_checkbox_column
 
 NAME_ID_PROPERTY_VIEWER_BASE = 'OBJECT_PT_GCMF_{0}_Viewer'

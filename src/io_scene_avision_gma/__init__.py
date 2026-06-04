@@ -3,11 +3,9 @@ import importlib
 
 from . import export_gma
 from . import import_gma
-#from . import import_gml
 from . import gcmf_editor
-# TODO: rename setting to property 
-from . import gcmf_setting
-from . import gcmf_node
+from . import gcmf_props
+from . import gcmf_shader_node
 
 bl_info = {
     "name": "Amusement Vision GMA format",
@@ -25,64 +23,67 @@ if "bpy" in locals():
         importlib.reload(import_gma)
     if "export_gma" in locals():
         importlib.reload(export_gma)
-    # TODO:remove import_gml
-#    if "import_gml" in locals():
-#        importlib.reload(import_gml)
-    if "gcmf_node" in locals():
-        importlib.reload(gcmf_node)
-    if "gcmf_setting" in locals():
-        importlib.reload(gcmf_setting)
+    if "gcmf_shader_node" in locals():
+        importlib.reload(gcmf_shader_node)
+    if "gcmf_props" in locals():
+        importlib.reload(gcmf_props)
     if "gcmf_editor" in locals():
         importlib.reload(gcmf_editor)
 
-from bpy.props import (
-        BoolProperty,
-        StringProperty,
-        )
-from bpy_extras.io_utils import (
-        ExportHelper,
-        ImportHelper,
-        )
+from bpy.props import BoolProperty, StringProperty
+from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 
-# Import GMA
+# ---------------------------------------------------------------------------
+# Operators
+# ---------------------------------------------------------------------------
+
 class IMPORT_UL_GMA(bpy.types.Operator, ImportHelper):
-    bl_idname = "import_scene.gma"
-    bl_label = "Import GMA"
+    """Import an Amusement Vision 3D model (.gma)."""
+
+    bl_idname    = "import_scene.gma"
+    bl_label     = "Import GMA"
     bl_description = "Import a Amusement Vision 3D model"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options   = {'REGISTER', 'UNDO'}
 
     filename_ext = ".gma"
     filter_glob: StringProperty(default="*.gma", options={'HIDDEN'})
 
     little_endian: BoolProperty(
-            name="Little Endian",
-            description="Read file as Little Endian. Super Monkey Ball Delux's gma must Enable this. ",
-            default=False,
-            )
+        name="Little Endian",
+        description=(
+            "Read file as Little Endian. "
+            "Required for Super Monkey Ball Deluxe."
+        ),
+        default=False,
+    )
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set:
         import_gma.load(self.filepath, self.little_endian)
         return {'FINISHED'}
 
 
-# Export GMA
 class EXPORT_UL_GMA(bpy.types.Operator, ExportHelper):
-    bl_idname = "export_scene.gma"
-    bl_label = "Export GMA"
+    """Export selected objects to an Amusement Vision 3D model (.gma)."""
+
+    bl_idname    = "export_scene.gma"
+    bl_label     = "Export GMA"
     bl_description = "Export a Amusement Vision model"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options   = {'REGISTER', 'UNDO'}
 
     filename_ext = ".gma"
     filter_glob: StringProperty(default="*.gma", options={'HIDDEN'})
 
     little_endian: BoolProperty(
-            name="Little Endian",
-            description="Write as Little Endian. Super Monkey Ball Delux's gma must Enable this.",
-            default=False,
-            )
+        name="Little Endian",
+        description=(
+            "Write as Little Endian. "
+            "Required for Super Monkey Ball Deluxe."
+        ),
+        default=False,
+    )
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set:
         export_gma.save(self.filepath, self.little_endian)
         return {'FINISHED'}
 
@@ -111,26 +112,35 @@ class IMPORT_UL_GML(bpy.types.Operator, ImportHelper):
 # no plans exporting GML
 
 
-def menu_func_import(self, context):
-    self.layout.operator(IMPORT_UL_GMA.bl_idname, text="Amusement Vision Model (.gma)")
-#    self.layout.operator(IMPORT_UL_GML.bl_idname, text="Amusement Vision Model alt(.gml)")
+# ---------------------------------------------------------------------------
+# Menu callbacks
+# ---------------------------------------------------------------------------
+
+def menu_func_import(self, context: bpy.types.Context) -> None:
+    self.layout.operator(IMPORT_UL_GMA.bl_idname,
+                         text="Amusement Vision Model (.gma)")
 
 
-def menu_func_export(self, context):
-    self.layout.operator(EXPORT_UL_GMA.bl_idname, text="Amusement Vision Model (.gma)")
-    #no plans export GML
+def menu_func_export(self, context: bpy.types.Context) -> None:
+    self.layout.operator(EXPORT_UL_GMA.bl_idname,
+                         text="Amusement Vision Model (.gma)")
 
+
+# ---------------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------------
 
 classes = (
-    #Import/Export
+    # Import / Export operators
     IMPORT_UL_GMA,
     EXPORT_UL_GMA,
 #    IMPORT_UL_GML,
-    #CustomProperty
-    gcmf_node.GCMFTextureNode,
-    gcmf_setting.GCMF_ObjectSetting,
-    gcmf_setting.GCMF_MaterialSetting,
-    #Panel
+    # Custom shader node
+    gcmf_shader_node.GCMFTextureNode,
+    # Property groups
+    gcmf_props.GCMF_ObjectSetting,
+    gcmf_props.GCMF_MaterialSetting,
+    # UI panels
     gcmf_editor.OBJECT_PT_GCMF_Object_Viewer,
     gcmf_editor.OBJECT_PT_GCMF_Object_Editor,
     gcmf_editor.OBJECT_PT_GCMF_Material_Viewer,
@@ -139,24 +149,22 @@ classes = (
 )
 
 
-def register():
+def register() -> None:
     for cls in classes:
         bpy.utils.register_class(cls)
-    
-    # Shader Node
-    bpy.types.NODE_MT_add.append(gcmf_node._add_node_menu)
-    # Import/Export Menu
+
+    bpy.types.NODE_MT_add.append(gcmf_shader_node._add_node_menu)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    # Custom Property Group
-    bpy.types.Object.gcmf_object = \
-        bpy.props.PointerProperty(type=gcmf_setting.GCMF_ObjectSetting)
-    bpy.types.Material.gcmf_material = \
-        bpy.props.PointerProperty(type=gcmf_setting.GCMF_MaterialSetting)
-    
 
-def unregister():
-    bpy.types.NODE_MT_add.remove(gcmf_node._add_node_menu)
+    bpy.types.Object.gcmf_object = bpy.props.PointerProperty(
+        type=gcmf_props.GCMF_ObjectSetting)
+    bpy.types.Material.gcmf_material = bpy.props.PointerProperty(
+        type=gcmf_props.GCMF_MaterialSetting)
+
+
+def unregister() -> None:
+    bpy.types.NODE_MT_add.remove(gcmf_shader_node._add_node_menu)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 

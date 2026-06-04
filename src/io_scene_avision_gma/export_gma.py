@@ -11,16 +11,17 @@ from .gcmf import Gcmf, Attribute, \
     Submesh, Material, \
     VertexAttribute, VertexRenderFlag, DisplatListHeader, \
     DisplayList, Vertex, Strip
-from .gcmf_node import GCMFTextureNode, collect_gcmf_texture_nodes
+from .gcmf_shader_node import GCMFTextureNode, collect_gcmf_texture_nodes
 
 # ---------------------------------------------------------------------------
 # Messages
 # ---------------------------------------------------------------------------
-MSG_INFO_INIT     = '---- {0} ----'
-MSG_INFO_DATA     = '{0}: {1}'
-MSG_WARN_TOO_MANY = 'Detect too many {0}s ({1}). Ignored {0}[{2}] and mores.'
-MSG_WARN_NONE_MAT = 'Detect none Material Object. "{0}" is ignored.'
-MSG_WARN_NONE_UV  = 'Detect UV not exist. exported any UV is (0.0, 0.0)'
+MSG_INFO_INIT        = '---- {0} ----'
+MSG_INFO_DATA        = '{0}: {1}'
+MSG_WARN_TOO_MANY    = 'Detect too many {0}s ({1}). Ignored {0}[{2}] and mores.'
+MSG_WARN_NONE_MAT    = 'Detect none Material Object. "{0}" is ignored.'
+MSG_WARN_NONE_UV     = 'Detect UV not exist. exported any UV is (0.0, 0.0)'
+MSG_WARN_NO_SUPPORT  = 'Detect unsupported GCMF Attribute. "{0}" is ignored.'
 
 
 # ---------------------------------------------------------------------------
@@ -631,6 +632,9 @@ def save(filepath: str, little_endian: bool = False) -> None:
         for i, obj in enumerate(sorted_objs):
             if len(obj.material_slots) < 1:
                 print(MSG_WARN_NONE_MAT.format(obj.name))
+                continue
+            if obj.gcmf_object.attribute == 'is_stiching' or obj.gcmf_object.attribute == 'is_skin' or obj.gcmf_object.attribute == 'is_effective':
+                print(MSG_WARN_NO_SUPPORT.format(obj.name))
                 continue
             gma.entrys.append(generate_gcmfentry(obj, i))
         gma.pack(file, sel_endian)
