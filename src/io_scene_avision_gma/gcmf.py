@@ -6,6 +6,14 @@ import mathutils
 import struct
 
 
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+class GCMFError(Exception):
+    """Raised when a fatal GCMF binary constraint is violated."""
+
+
 #Messages
 MSG_WARN_NOT_GCMF = 'magic_str:{0} not match magic:{1}'
 MSG_INFO_DATA = '{0}: {1}'
@@ -1033,7 +1041,7 @@ class Gcmf():
 
         # check GCMF Magic
         if (magic_str[::-1] if endian == '<' else magic_str) != self.magic:
-            print(MSG_WARN_NOT_GCMF.format(magic_str, self.magic))
+            raise GCMFError(MSG_WARN_NOT_GCMF.format(magic_str, self.magic))
         else:
             attr = buff[1]
             self.attribute.unpack(attr)

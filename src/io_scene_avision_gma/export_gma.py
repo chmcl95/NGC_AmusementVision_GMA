@@ -6,7 +6,7 @@ import numpy as np
 import struct
 
 from .gma import Gma, GcmfEntry
-from .gcmf import Gcmf, Attribute, \
+from .gcmf import Gcmf, Attribute, GCMFError, \
     Texture_Flags0x00, Texture_Mipmap, Texture_Wrap, Texture, TransformMatrix, \
     Submesh, Material, \
     VertexAttribute, VertexRenderFlag, DisplatListHeader, \
@@ -19,9 +19,8 @@ from .gcmf_shader_node import GCMFTextureNode, collect_gcmf_texture_nodes
 MSG_INFO_INIT        = '---- {0} ----'
 MSG_INFO_DATA        = '{0}: {1}'
 MSG_WARN_TOO_MANY    = 'Detect too many {0}s ({1}). Ignored {0}[{2}] and mores.'
-MSG_WARN_NONE_MAT    = 'Detect none Material Object. "{0}" is ignored.'
-MSG_WARN_NONE_UV     = 'Detect UV not exist. exported any UV is (0.0, 0.0)'
-MSG_WARN_NO_SUPPORT  = 'Detect unsupported GCMF Attribute. "{0}" is ignored.'
+MSG_WARN_NONE_MAT    = 'Ignored "{0}". Detect none Material Object.'
+MSG_WARN_NO_SUPPORT  = 'Ignored "{0}". Detect unsupported GCMF Attribute.'
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +88,8 @@ def generate_vat(bl_mat: bpy.types.Material, bm: bmesh.types.BMesh) -> VertexAtt
 # Material
 # ---------------------------------------------------------------------------
 def generate_material(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material,
-                      all_gcmf_mat_nodes: list) -> Material:
+                      all_gcmf_mat_nodes: list,
+                      warnings: list) -> Material:
     """Build a GCMF Material struct from a Blender material."""
     material   = Material()
     vtx_attr   = generate_vat(bl_mat, bm)
@@ -100,7 +100,7 @@ def generate_material(bm: bmesh.types.BMesh, bl_mat: bpy.types.Material,
     gcmf_nodes = collect_gcmf_texture_nodes(bl_mat)
     tex_count  = len(gcmf_nodes)
     if tex_count > 3:
-        print(MSG_WARN_TOO_MANY.format('TEXTURE', tex_count, 3))
+        warnings.append(MSG_WARN_TOO_MANY.format('TEXTURE', tex_count, 3))
         tex_count = 3
 
     texture_indexs = [-1, -1, -1]
@@ -421,14 +421,15 @@ def generate_submesh(attribute: Attribute,
                      all_gcmf_mat_nodes: list,
                      mat_idx: int,
                      split_normal_map: dict,
-                     tri_to_pre_poly: dict) -> Submesh:
+                     tri_to_pre_poly: dict,
+                     warnings: list) -> Submesh:
     """Build a Submesh struct for one material slot."""
     submesh = Submesh()
     submesh.dlist_headers = [generate_displaylistheader()]
 
     gcmf_nodes = collect_gcmf_texture_nodes(bl_mat)
 
-    submesh.material              = generate_material(bm, bl_mat, all_gcmf_mat_nodes)
+    submesh.material              = generate_material(bm, bl_mat, all_gcmf_mat_nodes, warnings)
     submesh.boundingsphere_origin = bl_mat.gcmf_material.boundingsphere_origin
     submesh.unk0x3C               = bl_mat.gcmf_material.unk0x3C
     val = sum(int(b) << (31 - i) for i, b in enumerate(bl_mat.gcmf_material.unk0x40))
@@ -456,7 +457,8 @@ def generate_attribute(bl_gcfm_attribute: str) -> Attribute:
 # ---------------------------------------------------------------------------
 # GCMF object
 # ---------------------------------------------------------------------------
-def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
+def generate_gcmf(obj: bpy.types.Object, idx: int,
+                  warnings: list) -> Gcmf:
     """
     Build a complete GCMF struct from a Blender mesh object.
 
@@ -495,7 +497,7 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
         gcmf_mat_nodes = collect_gcmf_texture_nodes(bl_mat)
         for i, gcmf_mat_node in enumerate(gcmf_mat_nodes):
             if i >= 3:
-                print(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
+                warnings.append(MSG_WARN_TOO_MANY.format('TEXTURE', i, 3))
                 break
             all_gcmf_mat_nodes.append(gcmf_mat_node)
 
@@ -593,7 +595,8 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     for mat_idx, mat_slot in enumerate(obj.material_slots):
         submesh = generate_submesh(
             gcmf.attribute, bm, obj, mat_slot.material,
-            all_gcmf_mat_nodes, mat_idx, split_normal_map, tri_to_pre_poly)
+            all_gcmf_mat_nodes, mat_idx, split_normal_map, tri_to_pre_poly,
+            warnings)
         gcmf.submeshs.append(submesh)
 
     obj.modifiers.remove(tri_mod)
@@ -610,10 +613,11 @@ def generate_gcmf(obj: bpy.types.Object, idx: int) -> Gcmf:
     return gcmf
 
 
-def generate_gcmfentry(obj: bpy.types.Object, idx: int) -> GcmfEntry:
+def generate_gcmfentry(obj: bpy.types.Object, idx: int,
+                       warnings: list) -> GcmfEntry:
     """Build a GcmfEntry from a Blender object."""
     entry      = GcmfEntry()
-    entry.gcmf = generate_gcmf(obj, idx)
+    entry.gcmf = generate_gcmf(obj, idx, warnings)
     entry.name = obj.name
     return entry
 
@@ -621,8 +625,13 @@ def generate_gcmfentry(obj: bpy.types.Object, idx: int) -> GcmfEntry:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-def save(filepath: str, little_endian: bool = False) -> None:
-    """Export selected objects to a GMA file at *filepath*."""
+def save(filepath: str, little_endian: bool = False) -> list:
+    """Export selected objects to a GMA file at *filepath*.
+
+    Returns a list of warning strings that occurred during export.
+    Raises GCMFError on fatal errors.
+    """
+    warnings: list = []
     with open(filepath, 'wb') as file:
         sel_endian  = '<' if little_endian else '>'
         gma         = Gma()
@@ -631,10 +640,11 @@ def save(filepath: str, little_endian: bool = False) -> None:
             key=lambda o: o.gcmf_object.index)
         for i, obj in enumerate(sorted_objs):
             if len(obj.material_slots) < 1:
-                print(MSG_WARN_NONE_MAT.format(obj.name))
+                warnings.append(MSG_WARN_NONE_MAT.format(obj.name))
                 continue
-            if obj.gcmf_object.attribute == 'is_stiching' or obj.gcmf_object.attribute == 'is_skin' or obj.gcmf_object.attribute == 'is_effective':
-                print(MSG_WARN_NO_SUPPORT.format(obj.name))
+            if obj.gcmf_object.attribute in ('is_stiching', 'is_skin', 'is_effective'):
+                warnings.append(MSG_WARN_NO_SUPPORT.format(obj.name))
                 continue
-            gma.entrys.append(generate_gcmfentry(obj, i))
+            gma.entrys.append(generate_gcmfentry(obj, i, warnings))
         gma.pack(file, sel_endian)
+    return warnings

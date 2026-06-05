@@ -3,6 +3,7 @@ import importlib
 
 from . import export_gma
 from . import import_gma
+from .gcmf import GCMFError
 from . import gcmf_editor
 from . import gcmf_props
 from . import gcmf_shader_node
@@ -59,7 +60,16 @@ class IMPORT_UL_GMA(bpy.types.Operator, ImportHelper):
     )
 
     def execute(self, context: bpy.types.Context) -> set:
-        import_gma.load(self.filepath, self.little_endian)
+        try:
+            warnings = import_gma.load(self.filepath, self.little_endian)
+        except GCMFError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"Unexpected error: {e}")
+            return {'CANCELLED'}
+        for w in warnings:
+            self.report({'WARNING'}, w)
         return {'FINISHED'}
 
 
@@ -84,7 +94,16 @@ class EXPORT_UL_GMA(bpy.types.Operator, ExportHelper):
     )
 
     def execute(self, context: bpy.types.Context) -> set:
-        export_gma.save(self.filepath, self.little_endian)
+        try:
+            warnings = export_gma.save(self.filepath, self.little_endian)
+        except GCMFError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"Unexpected error: {e}")
+            return {'CANCELLED'}
+        for w in warnings:
+            self.report({'WARNING'}, w)
         return {'FINISHED'}
 
 # TODO: enable GML Import AGAIN

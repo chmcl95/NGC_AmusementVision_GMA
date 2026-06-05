@@ -5,7 +5,7 @@ import mathutils
 import numpy
 
 from .gma import Gma
-from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material
+from .gcmf import VertexAttribute, Texture_Flags0x00, Texture_Wrap, Material, GCMFError
 from .gcmf_shader_node import GCMFTextureNode
 
 # Messages
@@ -245,8 +245,14 @@ def generate_attribute(attribute):
 # ---------------------------------------------------------------------------
 # Import entry point
 # ---------------------------------------------------------------------------
-def load(filepath, little_endian=False):
+def load(filepath: str, little_endian: bool = False) -> list:
+    """Load a GMA file and build Blender objects.
+
+    Returns a list of warning strings.
+    Raises GCMFError on fatal errors (e.g. GCMF magic mismatch).
+    """
     # Load and parse the GMA file.
+    warnings: list = []
 
     with open(filepath, 'rb') as file:
         sel_endian = '<' if little_endian else '>'
@@ -343,3 +349,4 @@ def load(filepath, little_endian=False):
                 bpy.context.object.rotation_euler[0] = 1.5708
 
     bpy.ops.object.shade_smooth()
+    return warnings
