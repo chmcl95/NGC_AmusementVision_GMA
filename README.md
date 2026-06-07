@@ -2,10 +2,10 @@
 
 This is Add-on Support Import/Export AmusementVision's GMA.
 
-Designed for **Blender 2.79 (e045fe53f1b0)**.
+Designed for **Blender 4.2+**.
 
 ## Installation
-1. Press Download and choose "zip".
+1. Download from [Release](https://github.com/chmcl95/NGC_AmusementVision_GMA/releases).
 
 2. Lunch Blender.
 
