@@ -18,6 +18,7 @@ from .gcmf_shader_node import GCMFTextureNode, collect_gcmf_texture_nodes
 # ---------------------------------------------------------------------------
 MSG_INFO_INIT        = '---- {0} ----'
 MSG_INFO_DATA        = '{0}: {1}'
+MSG_WARN_NONE_OBJ    = 'No Object selected. GMA generation cancelled.'
 MSG_WARN_TOO_MANY    = 'Detect too many {0}s ({1}). Ignored {0}[{2}] and mores.'
 MSG_WARN_NONE_MAT    = 'Ignored "{0}". Detect none Material Object.'
 MSG_WARN_NO_SUPPORT  = 'Ignored "{0}". Detect unsupported GCMF Attribute.'
@@ -625,19 +626,23 @@ def generate_gcmfentry(obj: bpy.types.Object, idx: int,
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-def save(filepath: str, little_endian: bool = False) -> list:
+def write(filepath: str, little_endian: bool = False) -> list:
     """Export selected objects to a GMA file at *filepath*.
 
     Returns a list of warning strings that occurred during export.
     Raises GCMFError on fatal errors.
     """
     warnings: list = []
+    sorted_objs = sorted(
+        bpy.context.selected_objects,
+        key=lambda o: o.gcmf_object.index)
+    # Check selected more than 1 objects.
+    if len(sorted_objs) < 1:
+        warnings.append(MSG_WARN_NONE_OBJ)
+        return warnings
     with open(filepath, 'wb') as file:
         sel_endian  = '<' if little_endian else '>'
         gma         = Gma()
-        sorted_objs = sorted(
-            bpy.context.selected_objects,
-            key=lambda o: o.gcmf_object.index)
         for i, obj in enumerate(sorted_objs):
             if len(obj.material_slots) < 1:
                 warnings.append(MSG_WARN_NONE_MAT.format(obj.name))

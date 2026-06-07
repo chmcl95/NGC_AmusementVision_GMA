@@ -95,7 +95,7 @@ class EXPORT_UL_GMA(bpy.types.Operator, ExportHelper):
 
     def execute(self, context: bpy.types.Context) -> set:
         try:
-            warnings = export_gma.save(self.filepath, self.little_endian)
+            warnings = export_gma.write(self.filepath, self.little_endian)
         except GCMFError as e:
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
